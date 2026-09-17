@@ -34,7 +34,7 @@ test("status body carries the documented public shape", async () => {
   assert.equal(body.status, "working");
   assert.equal(body.primary_task.title, "写文档");
   assert.equal(body.usage.windows.length, 1);
-  assert.equal(body.usage.windows[0].remaining_percent, 73);
+  assert.equal(body.usage.windows[0].remainingPercent, 73);
   assert.equal(body.other_active_task_count, 0);
   assert.equal(typeof body.server_time, "number");
   assert.equal(typeof body.last_updated_at, "number");
@@ -87,4 +87,15 @@ test("status response contains no restricted fields", async () => {
     assert.equal(serialized.toLowerCase().includes(banned.toLowerCase()), false, `response must not contain ${banned}`);
   }
   await server.close();
+});
+
+test("allowlist blocks clients that are not the configured device", async () => {
+  const store = createStateStore();
+  store.update(normalizeCodexSnapshot({ tasks: [] }));
+  const allowed = await createStatusServer(store, { host: "127.0.0.1", port: 0, allow: ["192.168.1.50"] });
+  assert.equal((await fetch(`${allowed.url}/api/v1/status`)).status, 403);
+  await allowed.close();
+  const open = await createStatusServer(store, { host: "127.0.0.1", port: 0, allow: ["127.0.0.1"] });
+  assert.equal((await fetch(`${open.url}/api/v1/status`)).status, 200);
+  await open.close();
 });
