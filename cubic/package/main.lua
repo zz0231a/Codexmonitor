@@ -91,17 +91,15 @@ app.state = {
 local VALID_STATUS = { idle = true, working = true, needs_user = true, done = true, error = true, offline = true }
 
 local function load_config()
-  -- 实机验证点：Cubic file API 读取本应用目录配置（WebUI 在 Task 4 写入）
-  local ok, raw = pcall(function() return file.read(APP_DIR .. "bridge.cfg") end)
+  -- 与 package/main.html 使用同一个配置路径（WebUI 写入，Lua 读取）
+  local ok, raw = pcall(function() return file.read(APP_DIR .. "config.json") end) -- 实机验证点：Cubic file API
   if not ok or type(raw) ~= "string" then return end
-  for line in raw:gmatch("[^\r\n]+") do
-    local k, v = line:match("^%s*(%w+)%s*=%s*(.-)%s*$")
-    if k == "host" and v and #v > 0 then
-      app.config.host = v
-    elseif k == "port" then
-      app.config.port = tonumber(v) or app.config.port
-    end
+  local okd, cfg = pcall(sjson.decode, raw)
+  if not okd or type(cfg) ~= "table" then return end
+  if type(cfg.host) == "string" and #cfg.host > 0 then
+    app.config.host = cfg.host
   end
+  app.config.port = tonumber(cfg.port) or app.config.port
 end
 
 -- ---------------------------------------------------------------------------
@@ -144,6 +142,24 @@ end
 
 local function set_color(ref, hex)
   if ref ~= nil then pcall(function() lv.obj_set_style_text_color(ref, ui_color(hex), 0) end) end
+end
+
+-- 离线或 Codex 断开时整体降暗；恢复后由 render 重新上色
+local function paint_labels(ref, hex)
+  if type(ref) == "table" then
+    for _, child in pairs(ref) do paint_labels(child, hex) end
+  elseif ref ~= nil then
+    set_color(ref, hex)
+  end
+end
+
+local function dim_label(ref)
+  paint_labels(ref, COLOR_OFFLINE)
+end
+
+-- dim=false 时把所有标签恢复基色（恢复路径），dim=true 时整体降暗
+local function apply_dim(dim)
+  paint_labels(app.ui, dim and COLOR_OFFLINE or COLOR_TEXT)
 end
 
 local function make_label(parent, x, y, text)
@@ -234,8 +250,12 @@ end
 function CODEX_MONITOR_APP.render_overview()
   local ui, st = app.ui, app.state
   local dim = st.offline or not st.codex.connected
-  set_text(ui.status, "CODEX · " .. (STATUS_LABEL[st.codex.status] or "--"))
-  set_color(ui.status, dim and COLOR_OFFLINE or COLOR_TEXT)
+  apply_dim(false) -- 先恢复基色；离线判定通过则最后统一降暗
+  if st.offline then
+    set_text(ui.status, "CODEX · OFFLINE · " .. fmt_reset(st.last_update))
+  else
+    set_text(ui.status, "CODEX · " .. (STATUS_LABEL[st.codex.status] or "--"))
+  end
   local pt = st.codex.primary_task
   set_text(ui.task_title, (pt ~= nil and pt.title) or "--")
   set_text(ui.task_model, "MODEL " .. ((pt ~= nil and pt.model) or "--"))
@@ -250,10 +270,13 @@ function CODEX_MONITOR_APP.render_overview()
   set_text(ui.weather_meta, "--")
   render_usage(ui.usage_5h, ui.usage_5h_reset, "5H", st.usage.five_hour)
   render_usage(ui.usage_7d, ui.usage_7d_reset, "7D", st.usage.seven_day)
+  if dim then dim_label(ui) end -- 离线/断连：整体降暗，数据保留
 end
 
 function CODEX_MONITOR_APP.render_details()
   local ui, st = app.ui, app.state
+  local dim = st.offline or not st.codex.connected
+  apply_dim(false)
   for i = 1, 5 do
     local a = st.activities[#st.activities + 1 - i] -- 最新在前
     if a ~= nil then
@@ -276,6 +299,7 @@ function CODEX_MONITOR_APP.render_details()
     set_text(ui.details_badge, "")
   end
   set_text(ui.details_other, "其他活动任务 " .. tostring(st.codex.other_active_task_count))
+  if dim then dim_label(ui) end
 end
 
 function CODEX_MONITOR_APP.render_page(index)

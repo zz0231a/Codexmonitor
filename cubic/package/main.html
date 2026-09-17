@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codex Monitor 设置</title>
+<style>
+  :root { --bg:#0c0e14; --panel:#161a24; --text:#d5dbe5; --dim:#8a93a6; --ok:#4ade80; --warn:#facc15; --err:#f87171; }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: ui-monospace, monospace; margin: 0; padding: 16px; }
+  h1 { font-size: 18px; color: var(--ok); letter-spacing: 2px; margin: 0 0 16px; }
+  .panel { background: var(--panel); border: 1px solid #2a3040; border-radius: 6px; padding: 16px; max-width: 420px; }
+  label { display: block; font-size: 12px; color: var(--dim); margin: 12px 0 4px; }
+  input { width: 100%; background: #0c0e14; border: 1px solid #2a3040; color: var(--text); border-radius: 4px; padding: 8px; font-family: inherit; }
+  .row { display: flex; gap: 8px; margin-top: 16px; }
+  button { flex: 1; background: #1f2635; border: 1px solid #3a4358; color: var(--text); border-radius: 4px; padding: 10px; font-family: inherit; cursor: pointer; }
+  button.primary { border-color: var(--ok); color: var(--ok); }
+  #result { margin-top: 16px; font-size: 12px; white-space: pre-wrap; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .err { color: var(--err); }
+  p.note { font-size: 11px; color: var(--dim); line-height: 1.6; }
+</style>
+</head>
+<body>
+  <h1>CODEX MONITOR</h1>
+  <div class="panel">
+    <label for="host">桥接程序 IP（Windows 电脑局域网地址）</label>
+    <input id="host" type="text" placeholder="192.168.1.10" autocomplete="off">
+    <label for="port">端口</label>
+    <input id="port" type="text" inputmode="numeric" placeholder="8973" autocomplete="off">
+    <label for="label">设备备注（可选）</label>
+    <input id="label" type="text" placeholder="副屏" autocomplete="off">
+    <div class="row">
+      <button id="save" class="primary">保存</button>
+      <button id="test">测试连接</button>
+    </div>
+    <div id="result"></div>
+    <p class="note">连接测试只读取 <code>/api/v1/health</code>，不会发送任何写请求。配置保存在本应用目录，不修改系统天气设置。</p>
+  </div>
+<script>
+"use strict";
+// 与 main.lua 使用同一个配置路径
+var CONFIG_PATH = "/sd/apps/codex_monitor/config.json";
+
+// 文件写入适配层（实机验证点：Cubic WebUI 暴露的写文件接口，按实机能力实现）
+function writeConfigFile(text) {
+  if (window.cubic && typeof window.cubic.fileWrite === "function") return window.cubic.fileWrite(CONFIG_PATH, text);
+  if (window.file && typeof window.file.write === "function") return window.file.write(CONFIG_PATH, text);
+  return Promise.reject(new Error("当前环境不支持写入配置文件"));
+}
+
+function readConfigFile() {
+  if (window.cubic && typeof window.cubic.fileRead === "function") return window.cubic.fileRead(CONFIG_PATH);
+  if (window.file && typeof window.file.read === "function") return window.file.read(CONFIG_PATH);
+  return Promise.resolve(null);
+}
+
+function show(text, cls) {
+  var el = document.getElementById("result");
+  el.textContent = text;
+  el.className = cls || "";
+}
+
+function currentConfig() {
+  return {
+    host: document.getElementById("host").value.trim(),
+    port: Number(document.getElementById("port").value.trim() || "8973"),
+    label: document.getElementById("label").value.trim()
+  };
+}
+
+document.getElementById("save").addEventListener("click", function () {
+  var cfg = currentConfig();
+  if (!cfg.host) { show("请先填写桥接程序 IP", "err"); return; }
+  writeConfigFile(JSON.stringify(cfg)).then(function () {
+    show("已保存到 " + CONFIG_PATH, "ok");
+  }).catch(function (err) {
+    show("保存失败：" + err.message, "err");
+  });
+});
+
+document.getElementById("test").addEventListener("click", function () {
+  var cfg = currentConfig();
+  if (!cfg.host) { show("请先填写桥接程序 IP", "err"); return; }
+  show("测试中…");
+  fetch("http://" + cfg.host + ":" + cfg.port + "/api/v1/health", { cache: "no-store" })
+    .then(function (res) { return res.json().then(function (body) { return { code: res.status, body: body }; }); })
+    .then(function (r) {
+      var lines = ["桥接程序：" + r.body.bridge, "Codex 连接：" + (r.body.codex_connected ? "正常" : "断开")];
+      show(lines.join("\n") + (r.code === 200 ? "" : "\n(HTTP " + r.code + ")"), r.code === 200 ? "ok" : "warn");
+    })
+    .catch(function () { show("无法连接桥接程序，请检查 IP、端口与网络", "err"); });
+});
+
+// 载入已有配置
+readConfigFile().then(function (raw) {
+  if (!raw) return;
+  try {
+    var cfg = JSON.parse(raw);
+    if (cfg.host) document.getElementById("host").value = cfg.host;
+    if (cfg.port) document.getElementById("port").value = String(cfg.port);
+    if (cfg.label) document.getElementById("label").value = cfg.label;
+    show("已载入现有配置", "ok");
+  } catch (e) { show("配置文件解析失败，将使用默认值", "warn"); }
+}).catch(function () {});
+</script>
+</body>
+</html>
