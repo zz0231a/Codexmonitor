@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "server_time": 1789636000,
+  "last_updated_at": 1789636000,
+  "codex_connected": true,
+  "status": "working",
+  "primary_task": {
+    "id": "task-9f3a",
+    "title": "重构协议适配器",
+    "status": "working",
+    "lastActiveAt": 1789635900,
+    "model": "gpt-5.2-codex",
+    "contextPercent": 42
+  },
+  "activities": [
+    { "stage": "analysis", "summary": "分析输入", "at": 1789635970 },
+    { "stage": "reading", "summary": "读取 [路径]", "at": 1789635976 },
+    { "stage": "tool", "summary": "执行 npm run verify -- --[密钥]", "at": 1789635982 },
+    { "stage": "responding", "summary": "生成回复", "at": 1789635990 },
+    { "stage": "tool", "summary": "打开 main.ts 继续修改", "at": 1789635996 }
+  ],
+  "usage": {
+    "windows": [
+      { "remainingPercent": 73, "windowDurationMins": 300, "resetsAt": 1789636300 },
+      { "remainingPercent": 38, "windowDurationMins": 10080, "resetsAt": 1789636000 }
+    ]
+  },
+  "other_active_task_count": 1
+}
