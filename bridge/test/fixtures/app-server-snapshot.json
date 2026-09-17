@@ -1,0 +1,40 @@
+{
+  "tasks": [
+    {
+      "id": "task-9f3a",
+      "title": "重构桥接层协议适配器",
+      "status": "running",
+      "lastActiveAt": 1760000042,
+      "model": "gpt-5.2-codex",
+      "activities": [
+        { "kind": "user_message", "text": "帮我把 token 换成 sk-ant-abcdef123456 再跑一遍", "at": 1760000010 },
+        { "kind": "tool", "text": "读取 C:\\Users\\dev\\project\\secret.env", "at": 1760000020 },
+        { "kind": "token_count", "inputTokens": 4123, "outputTokens": 88, "at": 1760000030 },
+        { "kind": "tool", "text": "执行 npm run verify -- --api-key=sk-ant-abcdef123456", "at": 1760000040 },
+        { "kind": "agent_message", "text": "已按你的要求完成，位于 C:\\Users\\dev\\project\\out。", "at": 1760000041 },
+        { "kind": "tool", "text": "打开 main.ts 继续修改", "at": 1760000042 }
+      ]
+    },
+    {
+      "id": "task-71bc",
+      "title": "审查登录模块 PR #128",
+      "status": "awaiting_user",
+      "lastActiveAt": 1760000038,
+      "model": "gpt-5.2-codex",
+      "activities": [
+        { "kind": "agent_message", "text": "是否合并该 PR？", "at": 1760000038 }
+      ]
+    },
+    {
+      "id": "task-52d1",
+      "title": "整理发布说明",
+      "status": "running",
+      "lastActiveAt": 1760000005,
+      "activities": []
+    }
+  ],
+  "rateLimits": [
+    { "windowDurationMins": 10080, "usedPercent": 62, "resetsAt": 1760604800 },
+    { "windowDurationMins": 300, "usedPercent": 27, "resetsAt": 1760003300 }
+  ]
+}
