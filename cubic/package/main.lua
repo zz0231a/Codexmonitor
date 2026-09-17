@@ -35,6 +35,14 @@ local function every(interval_ms, fn)
   return timer
 end
 
+local function cancel_timer(timer)
+  if timer == nil then return end
+  pcall(function() tmr.stop(timer) end)
+  for i, t in ipairs(app.timers) do
+    if t == timer then table.remove(app.timers, i) break end
+  end
+end
+
 local function unregister_keys()
   if app.key_registered then
     pcall(function() key.off() end) -- 实机验证点：key 注销签名
@@ -94,6 +102,210 @@ local function load_config()
       app.config.port = tonumber(v) or app.config.port
     end
   end
+end
+
+-- ---------------------------------------------------------------------------
+-- 页面布局与轮播：两页每 30 秒自动切换，手动切换后重计时
+-- ---------------------------------------------------------------------------
+
+local PAGE_COUNT = 2
+local ROTATE_MS = 30000
+local BAR_WIDTH = 10
+
+app.page_index = 1
+app.rotate_timer = nil
+app.pages = nil
+app.ui = {} -- 全部 LVGL 控件引用，退出时随 root 一起删除
+
+-- 深色像素终端风配色（实机验证点：lv 颜色 API）
+local COLOR_TEXT = 0xD5DBE5
+local COLOR_DIM = 0x8A93A6
+local COLOR_OK = 0x4ADE80
+local COLOR_WARN = 0xFACC15
+local COLOR_ERR = 0xF87171
+local COLOR_OFFLINE = 0x555C6B
+
+local STATUS_LABEL = {
+  idle = "IDLE",
+  working = "WORKING",
+  needs_user = "NEEDS USER",
+  done = "DONE",
+  error = "ERROR",
+  offline = "OFFLINE",
+}
+
+local function ui_color(hex) -- 实机验证点：lv.color_hex
+  return lv.color_hex(hex)
+end
+
+local function set_text(ref, text)
+  if ref ~= nil then pcall(function() lv.label_set_text(ref, text) end) end -- 实机验证点
+end
+
+local function set_color(ref, hex)
+  if ref ~= nil then pcall(function() lv.obj_set_style_text_color(ref, ui_color(hex), 0) end) end
+end
+
+local function make_label(parent, x, y, text)
+  local ref = lv.label(parent) -- 实机验证点：label 创建
+  pcall(function()
+    lv.obj_set_pos(ref, x, y)
+    lv.label_set_text(ref, text)
+    lv.obj_set_style_text_color(ref, ui_color(COLOR_TEXT), 0)
+  end)
+  return ref
+end
+
+local function set_page_visible(page, visible) -- 实机验证点：隐藏/显示对象
+  pcall(function()
+    if visible then
+      lv.obj_clear_flag(page, lv.OBJ_FLAG_HIDDEN)
+    else
+      lv.obj_add_flag(page, lv.OBJ_FLAG_HIDDEN)
+    end
+  end)
+end
+
+local function usage_bar_text(remaining)
+  local filled = math.floor(remaining / 100 * BAR_WIDTH + 0.5)
+  return string.rep("█", filled) .. string.rep("░", BAR_WIDTH - filled)
+end
+
+local function usage_color(remaining)
+  if remaining == 0 then return COLOR_ERR end
+  if remaining < 20 then return COLOR_WARN end
+  return COLOR_OK
+end
+
+local function fmt_reset(ts)
+  local ok, text = pcall(function() return os.date("%H:%M", ts) end) -- 实机验证点：os.date
+  return ok and text or "--"
+end
+
+local function build_ui()
+  local ui = app.ui
+  app.pages = {}
+  for i = 1, PAGE_COUNT do
+    local page = lv.obj(app.root) -- 实机验证点：页面容器
+    pcall(function() lv.obj_set_size(page, 320, 240) end)
+    app.pages[i] = page
+  end
+
+  -- 第 1 页：总览（左上 Codex / 右上天气 / 底部用量条）
+  local p1 = app.pages[1]
+  ui.status = make_label(p1, 4, 4, "CODEX · --")
+  ui.task_title = make_label(p1, 4, 26, "--")
+  ui.task_model = make_label(p1, 4, 66, "--")
+  ui.task_context = make_label(p1, 4, 88, "--")
+  ui.weather_city = make_label(p1, 164, 26, "--")
+  ui.weather_temp = make_label(p1, 164, 48, "--")
+  ui.weather_meta = make_label(p1, 164, 90, "--")
+  ui.usage_5h = make_label(p1, 4, 170, "5H --")
+  ui.usage_5h_reset = make_label(p1, 244, 170, "--")
+  ui.usage_7d = make_label(p1, 4, 198, "7D --")
+  ui.usage_7d_reset = make_label(p1, 244, 198, "--")
+
+  -- 第 2 页：活动详情
+  local p2 = app.pages[2]
+  ui.details_title = make_label(p2, 4, 4, "ACTIVITIES")
+  ui.activity_lines = {}
+  for i = 1, 5 do
+    ui.activity_lines[i] = make_label(p2, 4, 26 + (i - 1) * 22, "--")
+  end
+  ui.details_model = make_label(p2, 4, 150, "MODEL --")
+  ui.details_context = make_label(p2, 4, 172, "CTX --")
+  ui.details_badge = make_label(p2, 4, 194, "")
+  ui.details_other = make_label(p2, 4, 216, "其他活动任务 0")
+end
+
+local function render_usage(bar_ref, reset_ref, prefix, win)
+  if win == nil then
+    set_text(bar_ref, prefix .. " " .. string.rep("░", BAR_WIDTH) .. " --")
+    set_text(reset_ref, "--")
+    set_color(bar_ref, COLOR_DIM)
+    return
+  end
+  local remaining = win.remainingPercent
+  set_text(bar_ref, prefix .. " " .. usage_bar_text(remaining) .. " " .. tostring(remaining) .. "%")
+  set_text(reset_ref, fmt_reset(win.resetsAt))
+  set_color(bar_ref, usage_color(remaining))
+end
+
+function CODEX_MONITOR_APP.render_overview()
+  local ui, st = app.ui, app.state
+  local dim = st.offline or not st.codex.connected
+  set_text(ui.status, "CODEX · " .. (STATUS_LABEL[st.codex.status] or "--"))
+  set_color(ui.status, dim and COLOR_OFFLINE or COLOR_TEXT)
+  local pt = st.codex.primary_task
+  set_text(ui.task_title, (pt ~= nil and pt.title) or "--")
+  set_text(ui.task_model, "MODEL " .. ((pt ~= nil and pt.model) or "--"))
+  if pt ~= nil and pt.contextPercent ~= nil then
+    set_text(ui.task_context, "CTX " .. tostring(pt.contextPercent) .. "%")
+  else
+    set_text(ui.task_context, "CTX --")
+  end
+  -- 天气面板：Task 4 接入 Cubic 系统天气，此前显示 --
+  set_text(ui.weather_city, "--")
+  set_text(ui.weather_temp, "--")
+  set_text(ui.weather_meta, "--")
+  render_usage(ui.usage_5h, ui.usage_5h_reset, "5H", st.usage.five_hour)
+  render_usage(ui.usage_7d, ui.usage_7d_reset, "7D", st.usage.seven_day)
+end
+
+function CODEX_MONITOR_APP.render_details()
+  local ui, st = app.ui, app.state
+  for i = 1, 5 do
+    local a = st.activities[#st.activities + 1 - i] -- 最新在前
+    if a ~= nil then
+      set_text(ui.activity_lines[i], a.summary)
+    else
+      set_text(ui.activity_lines[i], "--")
+    end
+  end
+  local pt = st.codex.primary_task
+  set_text(ui.details_model, "MODEL " .. ((pt ~= nil and pt.model) or "--"))
+  if pt ~= nil and pt.contextPercent ~= nil then
+    set_text(ui.details_context, "CTX " .. tostring(pt.contextPercent) .. "%")
+  else
+    set_text(ui.details_context, "CTX --")
+  end
+  if st.codex.status == "needs_user" then
+    set_text(ui.details_badge, "● 需要处理")
+    set_color(ui.details_badge, COLOR_WARN)
+  else
+    set_text(ui.details_badge, "")
+  end
+  set_text(ui.details_other, "其他活动任务 " .. tostring(st.codex.other_active_task_count))
+end
+
+function CODEX_MONITOR_APP.render_page(index)
+  app.page_index = index
+  if app.pages ~= nil then
+    for i = 1, PAGE_COUNT do set_page_visible(app.pages[i], i == index) end
+  end
+  if index == 1 then
+    CODEX_MONITOR_APP.render_overview()
+  elseif index == 2 then
+    CODEX_MONITOR_APP.render_details()
+  end
+end
+
+local function restart_rotation()
+  if app.rotate_timer ~= nil then cancel_timer(app.rotate_timer) end
+  app.rotate_timer = every(ROTATE_MS, function()
+    CODEX_MONITOR_APP.switch_page(app.page_index % PAGE_COUNT + 1, false)
+  end)
+end
+
+function CODEX_MONITOR_APP.switch_page(index, manual)
+  if index < 1 then index = PAGE_COUNT end
+  if index > PAGE_COUNT then index = 1 end
+  CODEX_MONITOR_APP.render_page(index)
+  if manual then restart_rotation() end -- 手动切换后重计 30 秒
+end
+
+function CODEX_MONITOR_APP.refresh()
+  CODEX_MONITOR_APP.render_page(app.page_index)
 end
 
 -- ---------------------------------------------------------------------------
@@ -190,6 +402,7 @@ local function normalize_body(body)
   st.last_update = valid_number(body.server_time, 0) or st.last_update
   st.offline = false
   st.fail_count = 0
+  CODEX_MONITOR_APP.refresh()
 end
 
 local function on_bridge_failure()
@@ -198,6 +411,7 @@ local function on_bridge_failure()
   if st.fail_count >= OFFLINE_AFTER_FAILURES then
     st.offline = true -- 进入离线：保留最后非敏感数据并整体降暗
   end
+  CODEX_MONITOR_APP.refresh()
 end
 
 local function on_bridge_response(code, body)
@@ -236,12 +450,16 @@ function CODEX_MONITOR_APP.start()
   app.root = lv.obj(nil) -- 实机验证点：根屏幕创建
   lv.obj_set_size(app.root, 320, 240)
 
-  key.on("left", function() CODEX_MONITOR_APP.on_key("left") end) -- 实机验证点：按键注册
-  key.on("right", function() CODEX_MONITOR_APP.on_key("right") end)
-  key.on("home", function() CODEX_MONITOR_APP.on_key("home") end)
+  build_ui()
+
+  key.on(key.LEFT, function() CODEX_MONITOR_APP.on_key("left") end) -- 实机验证点：按键常量与注册
+  key.on(key.RIGHT, function() CODEX_MONITOR_APP.on_key("right") end)
+  key.on(key.HOME, function() CODEX_MONITOR_APP.on_key("home") end)
   app.key_registered = true
 
-  every(1000, function() CODEX_MONITOR_APP.tick() end) -- 1 秒轮询桥接状态（Task 2 实现）
+  CODEX_MONITOR_APP.render_page(1)
+  restart_rotation()
+  every(1000, function() CODEX_MONITOR_APP.tick() end) -- 1 秒轮询桥接状态
 end
 
 function CODEX_MONITOR_APP.tick()
@@ -249,14 +467,23 @@ function CODEX_MONITOR_APP.tick()
 end
 
 function CODEX_MONITOR_APP.on_key(name)
-  -- Task 2+：LEFT/RIGHT 切页，HOME 退出
-  if name == "home" then
-    CODEX_MONITOR_APP.stop("home")
+  if name == "left" then
+    CODEX_MONITOR_APP.switch_page(app.page_index - 1, true)
+  elseif name == "right" then
+    CODEX_MONITOR_APP.switch_page(app.page_index + 1, true)
+  elseif name == "home" then
+    -- 实机验证点：Cubic 系统退出 API；不可用时回退到自身 stop
+    if _G.app ~= nil and type(_G.app.exit) == "function" then
+      _G.app.exit()
+    else
+      CODEX_MONITOR_APP.stop("home")
+    end
   end
 end
 
 function CODEX_MONITOR_APP.stop(reason)
   stop_timers()
+  app.rotate_timer = nil
   unregister_keys()
   clear_root()
   app.running = false
