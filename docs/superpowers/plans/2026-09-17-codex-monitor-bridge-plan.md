@@ -1,6 +1,6 @@
 # Codex Monitor Windows Bridge Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Build a Windows login-start bridge that reads the local Codex app-server and exposes a privacy-filtered, read-only status API to Cubic.
 
@@ -30,7 +30,7 @@
 **Interfaces:**
 - Produces `BridgeSnapshot`, `TaskSummary`, `ActivitySummary`, `UsageWindow`, and `normalizeUsageWindow(raw)` for later tasks.
 
-- [ ] **Step 1: Write failing model tests**
+- [x] **Step 1: Write failing model tests**
 
 ```ts
 import { test } from "node:test";
@@ -48,23 +48,23 @@ test("returns null when usage window is absent", () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify it fails**
+- [x] **Step 2: Run the focused test and verify it fails**
 
 Run: `cd bridge; npm test -- --test-name-pattern="normalizes|absent"`
 
 Expected: FAIL because `src/model.ts` and `normalizeUsageWindow` do not exist.
 
-- [ ] **Step 3: Implement the minimal model and package scripts**
+- [x] **Step 3: Implement the minimal model and package scripts**
 
 Define exact JSON-safe interfaces and implement `normalizeUsageWindow(raw: unknown): UsageWindow | null`; reject non-numeric or out-of-range values by returning `null`.
 
-- [ ] **Step 4: Run the focused test and verify it passes**
+- [x] **Step 4: Run the focused test and verify it passes**
 
 Run: `cd bridge; npm test -- --test-name-pattern="normalizes|absent"`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```text
 git add bridge
@@ -83,7 +83,7 @@ git commit -m "桥接层：建立状态快照模型"
 - Consumes `BridgeSnapshot` model types from Task 1.
 - Produces `normalizeCodexSnapshot(input): BridgeSnapshot` and `selectPrimaryTask(tasks): TaskSummary | null`.
 
-- [ ] **Step 1: Write failing tests for task priority, activity redaction, and rate windows**
+- [x] **Step 1: Write failing tests for task priority, activity redaction, and rate windows**
 
 ```ts
 test("prioritizes a task needing user action over a running task", () => {
@@ -100,23 +100,23 @@ test("drops sensitive fields from activity summaries", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify failure**
+- [x] **Step 2: Run tests and verify failure**
 
 Run: `cd bridge; npm test -- --test-name-pattern="prioritizes|drops"`
 
 Expected: FAIL because the adapter and normalizer are not implemented.
 
-- [ ] **Step 3: Implement the adapter and normalizer**
+- [x] **Step 3: Implement the adapter and normalizer**
 
 Implement a JSON-RPC transport boundary with `connectCodex(): AsyncIterable<unknown>` and keep protocol parsing in `codex-protocol.ts`. In `normalizer.ts`, map only safe event kind, safe short label, timestamp, status, model name, counts, and usage fields. Truncate labels to 80 characters and remove newlines.
 
-- [ ] **Step 4: Run all bridge unit tests**
+- [x] **Step 4: Run all bridge unit tests**
 
 Run: `cd bridge; npm test`
 
 Expected: PASS for priority, redaction, window identification, missing fields, and status mapping.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```text
 git add bridge/src bridge/test
@@ -134,7 +134,7 @@ git commit -m "桥接层：归一化 Codex 任务与用量"
 - Consumes `BridgeSnapshot` from Task 1 and normalized updates from Task 2.
 - Produces `createStatusServer(store, config)` and JSON responses for `/api/v1/status` and `/api/v1/health`.
 
-- [ ] **Step 1: Write failing HTTP tests**
+- [x] **Step 1: Write failing HTTP tests**
 
 ```ts
 test("serves status but rejects mutating routes", async () => {
@@ -147,23 +147,23 @@ test("serves status but rejects mutating routes", async () => {
 });
 ```
 
-- [ ] **Step 2: Run test and verify failure**
+- [x] **Step 2: Run test and verify failure**
 
 Run: `cd bridge; npm test -- --test-name-pattern="serves status"`
 
 Expected: FAIL because the server does not exist.
 
-- [ ] **Step 3: Implement server and state store**
+- [x] **Step 3: Implement server and state store**
 
 Bind to the configured LAN address, return a JSON snapshot with `schemaVersion: 1`, set `Cache-Control: no-store`, reject non-GET methods, and return `503` only for `/health` when the bridge cannot connect. A stale status snapshot remains readable and includes `codex_connected: false` and `last_updated_at`.
 
-- [ ] **Step 4: Run HTTP, redaction, and stale-state tests**
+- [x] **Step 4: Run HTTP, redaction, and stale-state tests**
 
 Run: `cd bridge; npm test`
 
 Expected: PASS, including no mutating endpoint and no restricted fields in serialized output.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```text
 git add bridge/src/server.ts bridge/src/state-store.ts bridge/test/server.test.ts
@@ -184,7 +184,7 @@ git commit -m "桥接层：提供只读状态接口"
 - Consumes the adapter, state store, and HTTP server from Tasks 1–3.
 - Produces a user-level startup installation and a working `npm run start` command.
 
-- [ ] **Step 1: Write failing sample integration test**
+- [x] **Step 1: Write failing sample integration test**
 
 ```ts
 test("sample app-server snapshot becomes the documented public JSON", async () => {
@@ -196,23 +196,23 @@ test("sample app-server snapshot becomes the documented public JSON", async () =
 });
 ```
 
-- [ ] **Step 2: Run and verify failure**
+- [x] **Step 2: Run and verify failure**
 
 Run: `cd bridge; npm test -- --test-name-pattern="sample app-server"`
 
 Expected: FAIL because the executable entry point and fixture runner are not implemented.
 
-- [ ] **Step 3: Implement startup and configuration**
+- [x] **Step 3: Implement startup and configuration**
 
 Read `config.json`, default to a loopback listener plus an explicit LAN opt-in, start the app-server adapter, and expose clean shutdown. The PowerShell installer creates a current-user Startup shortcut or scheduled task without administrator rights; the uninstaller removes only that named entry.
 
-- [ ] **Step 4: Run all tests and a local sample server**
+- [x] **Step 4: Run all tests and a local sample server**
 
 Run: `cd bridge; npm test`; then `npm run start -- --fixture test/fixtures/app-server-snapshot.json` and request `GET http://127.0.0.1:<port>/api/v1/status`.
 
 Expected: all tests PASS and the response contains only the documented safe snapshot fields.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```text
 git add bridge
@@ -221,8 +221,8 @@ git commit -m "桥接层：完成 Windows 启动与配置"
 
 ## Verification Checklist
 
-- [ ] Unit tests pass with `npm test`.
-- [ ] Sample response contains both 300-minute and 10080-minute windows when supplied.
-- [ ] `GET /api/v1/health` reports bridge and Codex connectivity separately.
-- [ ] No response or log contains prompt text, response text, command arguments, file contents, account IDs, API keys, or auth tokens.
-- [ ] Startup install/uninstall is scoped to the current user and named application entry.
+- [x] Unit tests pass with `npm test`.
+- [x] Sample response contains both 300-minute and 10080-minute windows when supplied.
+- [x] `GET /api/v1/health` reports bridge and Codex connectivity separately.
+- [x] No response or log contains prompt text, response text, command arguments, file contents, account IDs, API keys, or auth tokens.
+- [x] Startup install/uninstall is scoped to the current user and named application entry.
