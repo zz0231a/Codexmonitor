@@ -1,0 +1,9 @@
+id = codex_monitor
+kind = app
+entry = main.lua
+catalog_scope = community
+name = Codex Monitor
+name_zh = Codex 状态监视
+version = 0.1.0
+author = llzz7
+icon = main.png
