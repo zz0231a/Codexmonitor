@@ -61,12 +61,29 @@ test("health reports bridge and codex connectivity separately", async () => {
   const okBody = await ok.json();
   assert.equal(okBody.bridge, "up");
   assert.equal(okBody.codex_connected, true);
+  assert.equal(okBody.sources.hook.connected, false);
+  assert.equal(okBody.sources.jsonl.available, false);
   server.store.markDisconnected();
   const bad = await fetch(`${server.url}/api/v1/health`);
   assert.equal(bad.status, 503);
   const badBody = await bad.json();
   assert.equal(badBody.bridge, "up");
   assert.equal(badBody.codex_connected, false);
+  await server.close();
+});
+
+test("health stays 200 when a source is available even if snapshot is disconnected", async () => {
+  const store = createStateStore();
+  store.markDisconnected();
+  store.updateSourceHealth("jsonl", { available: true, fileFound: true, lastRecordAt: 9 });
+  const server = await createStatusServer(store, { host: "127.0.0.1", port: 0 });
+  const res = await fetch(`${server.url}/api/v1/health`);
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(body.codex_connected, false);
+  assert.equal(body.sources.jsonl.available, true);
+  assert.equal(body.sources.jsonl.file_found, true);
+  assert.equal(body.sources.jsonl.last_record_at, 9);
   await server.close();
 });
 

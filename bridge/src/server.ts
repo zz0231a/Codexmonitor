@@ -69,11 +69,22 @@ export async function createStatusServer(store: StateStore, config: ServerConfig
       return;
     }
     if (path === "/api/v1/health") {
-      const connected = store.current()?.codexConnected ?? false;
-      sendJson(res, connected ? 200 : 503, {
+      const snapshot = store.current();
+      const connected = snapshot?.codexConnected ?? false;
+      const sources = store.sourceHealth();
+      const sourceAvailable = sources.hook.connected || sources.jsonl.available || connected;
+      sendJson(res, sourceAvailable ? 200 : 503, {
         bridge: "up",
         codex_connected: connected,
         last_updated_at: store.lastUpdatedAt(),
+        sources: {
+          hook: { connected: sources.hook.connected, last_event_at: sources.hook.lastEventAt },
+          jsonl: {
+            available: sources.jsonl.available,
+            file_found: sources.jsonl.fileFound,
+            last_record_at: sources.jsonl.lastRecordAt,
+          },
+        },
       });
       return;
     }
