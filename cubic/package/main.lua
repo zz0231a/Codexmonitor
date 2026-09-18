@@ -8,36 +8,62 @@
 local APP_ID = "codex_monitor"
 local APP_DIR = "/sd/apps/codex_monitor/"
 
+local prev = rawget(_G, "CODEX_MONITOR_APP")
+if prev and prev.stop then
+  pcall(function() prev.stop("reload") end)
+end
+
 -- 稳定的全局入口：系统加载 / 重载本文件时重新取得同一对象。
 CODEX_MONITOR_APP = {
   root = nil,
   timers = {},
   key_registered = false,
   running = false,
+  owns_screen = false,
 }
 local app = CODEX_MONITOR_APP
 
 -- ---------------------------------------------------------------------------
--- 设备 API 边界：tmr / key / LVGL 的具体签名以实机 Cubic 运行时为准，
--- 全部调用点集中在这一段，实机联调时只需核对这里。
+-- 设备 API 边界：固件 1.212 使用 tmr.create / lv_* 全局函数。
 -- ---------------------------------------------------------------------------
+
+local MAIN_STYLE = (rawget(_G, "LV_PART_MAIN") or 0)
+local HIDDEN_FLAG = rawget(_G, "LV_OBJ_FLAG_HIDDEN")
 
 local function stop_timers()
   for _, t in ipairs(app.timers) do
-    pcall(function() tmr.stop(t) end)
+    pcall(function()
+      if type(t) == "table" then
+        if t.stop then t:stop() end
+        if t.unregister then t:unregister() end
+      end
+      if tmr and tmr.stop then tmr.stop(t) end
+    end)
   end
   app.timers = {}
 end
 
 local function every(interval_ms, fn)
-  local timer = tmr.start(interval_ms, fn) -- 实机验证点：tmr 启动签名
+  if tmr and tmr.create then
+    local timer = tmr.create()
+    timer:alarm(interval_ms, tmr.ALARM_AUTO, fn)
+    table.insert(app.timers, timer)
+    return timer
+  end
+  local timer = tmr.start(interval_ms, fn)
   table.insert(app.timers, timer)
   return timer
 end
 
 local function cancel_timer(timer)
   if timer == nil then return end
-  pcall(function() tmr.stop(timer) end)
+  pcall(function()
+    if type(timer) == "table" then
+      if timer.stop then timer:stop() end
+      if timer.unregister then timer:unregister() end
+    end
+    if tmr and tmr.stop then tmr.stop(timer) end
+  end)
   for i, t in ipairs(app.timers) do
     if t == timer then table.remove(app.timers, i) break end
   end
@@ -45,16 +71,35 @@ end
 
 local function unregister_keys()
   if app.key_registered then
-    pcall(function() key.off() end) -- 实机验证点：key 注销签名
+    pcall(function() key.off() end)
     app.key_registered = false
   end
 end
 
 local function clear_root()
-  if app.root ~= nil then
-    pcall(function() lv.obj_del(app.root) end) -- 实机验证点：LVGL 删除对象
-    app.root = nil
+  if app.root == nil then return end
+  if app.owns_screen then
+    pcall(function()
+      if lv and lv.obj_del then lv.obj_del(app.root)
+      elseif lv_obj_del then lv_obj_del(app.root) end
+    end)
+  elseif lv_obj_clean then
+    pcall(lv_obj_clean, app.root)
   end
+  app.root = nil
+  app.owns_screen = false
+end
+
+local function read_text_file(path)
+  if file and file.getcontents then
+    local ok, raw = pcall(file.getcontents, path)
+    if ok and type(raw) == "string" then return raw end
+  end
+  if file and file.read then
+    local ok, raw = pcall(file.read, path)
+    if ok and type(raw) == "string" then return raw end
+  end
+  return nil
 end
 
 -- ---------------------------------------------------------------------------
@@ -111,9 +156,8 @@ local function valid_port(port)
 end
 
 local function load_config()
-  -- 与 package/main.html 使用同一个配置路径（WebUI 写入，Lua 读取）
-  local ok, raw = pcall(function() return file.read(APP_DIR .. "config.json") end) -- 实机验证点：Cubic file API
-  if not ok or type(raw) ~= "string" then return end
+  local raw = read_text_file(APP_DIR .. "config.json")
+  if type(raw) ~= "string" then return end
   local okd, cfg = pcall(sjson.decode, raw)
   if not okd or type(cfg) ~= "table" then return end
   if valid_host(cfg.host) then
@@ -133,6 +177,15 @@ local function load_weather_city()
       city = settings.city
     end
   end)
+  if city == nil then
+    local raw = read_text_file("/sd/apps/settings.json")
+    if type(raw) == "string" then
+      local okd, doc = pcall(sjson.decode, raw)
+      if okd and type(doc) == "table" then
+        city = doc.weather_city or doc.city_name or doc.city
+      end
+    end
+  end
   if type(city) == "string" and #city > 0 then
     city = city:gsub("[%z\1-\31]", " "):gsub("^%s+", ""):gsub("%s+$", "")
     if #city > 40 then city = city:sub(1, 40) end
@@ -172,16 +225,26 @@ local STATUS_LABEL = {
   offline = "OFFLINE",
 }
 
-local function ui_color(hex) -- 实机验证点：lv.color_hex
-  return lv.color_hex(hex)
+local function ui_color(hex)
+  if lv_color_hex then return lv_color_hex(hex) end
+  if lv and lv.color_hex then return lv.color_hex(hex) end
+  return hex
 end
 
 local function set_text(ref, text)
-  if ref ~= nil then pcall(function() lv.label_set_text(ref, text) end) end -- 实机验证点
+  if ref == nil then return end
+  pcall(function()
+    if lv_label_set_text then lv_label_set_text(ref, text)
+    elseif lv then lv.label_set_text(ref, text) end
+  end)
 end
 
 local function set_color(ref, hex)
-  if ref ~= nil then pcall(function() lv.obj_set_style_text_color(ref, ui_color(hex), 0) end) end
+  if ref == nil then return end
+  pcall(function()
+    if lv_obj_set_style_text_color then lv_obj_set_style_text_color(ref, ui_color(hex), MAIN_STYLE)
+    elseif lv then lv.obj_set_style_text_color(ref, ui_color(hex), 0) end
+  end)
 end
 
 -- 离线或 Codex 断开时整体降暗；恢复后由 render 重新上色
@@ -203,21 +266,25 @@ local function apply_dim(dim)
 end
 
 local function make_label(parent, x, y, text)
-  local ref = lv.label(parent) -- 实机验证点：label 创建
+  local ref = nil
+  if lv_label_create then ref = lv_label_create(parent)
+  elseif lv and lv.label then ref = lv.label(parent) end
   pcall(function()
-    lv.obj_set_pos(ref, x, y)
-    lv.label_set_text(ref, text)
-    lv.obj_set_style_text_color(ref, ui_color(COLOR_TEXT), 0)
+    if lv_obj_set_pos then lv_obj_set_pos(ref, x, y)
+    elseif lv then lv.obj_set_pos(ref, x, y) end
+    set_text(ref, text)
+    set_color(ref, COLOR_TEXT)
   end)
   return ref
 end
 
-local function set_page_visible(page, visible) -- 实机验证点：隐藏/显示对象
+local function set_page_visible(page, visible)
   pcall(function()
-    if visible then
-      lv.obj_clear_flag(page, lv.OBJ_FLAG_HIDDEN)
-    else
-      lv.obj_add_flag(page, lv.OBJ_FLAG_HIDDEN)
+    local flag = HIDDEN_FLAG or (lv and lv.OBJ_FLAG_HIDDEN)
+    if flag and lv_obj_add_flag and lv_obj_clear_flag then
+      if visible then lv_obj_clear_flag(page, flag) else lv_obj_add_flag(page, flag) end
+    elseif lv then
+      if visible then lv.obj_clear_flag(page, lv.OBJ_FLAG_HIDDEN) else lv.obj_add_flag(page, lv.OBJ_FLAG_HIDDEN) end
     end
   end)
 end
@@ -242,8 +309,13 @@ local function build_ui()
   local ui = app.ui
   app.pages = {}
   for i = 1, PAGE_COUNT do
-    local page = lv.obj(app.root) -- 实机验证点：页面容器
-    pcall(function() lv.obj_set_size(page, 320, 240) end)
+    local page = nil
+    if lv_obj_create then page = lv_obj_create(app.root)
+    elseif lv and lv.obj then page = lv.obj(app.root) end
+    pcall(function()
+      if lv_obj_set_size then lv_obj_set_size(page, 320, 240)
+      elseif lv then lv.obj_set_size(page, 320, 240) end
+    end)
     app.pages[i] = page
   end
 
@@ -499,7 +571,10 @@ local function poll_bridge()
   end
   local url = "http://" .. app.config.host .. ":" .. tostring(app.config.port) .. "/api/v1/status"
   local ok = pcall(function()
-    http.get(url, { timeout = HTTP_TIMEOUT_MS }, function(code, body) -- 实机验证点：http 异步签名
+    http.get(url, {
+      timeout = HTTP_TIMEOUT_MS,
+      headers = { Accept = "application/json", ["Accept-Encoding"] = "identity", Connection = "close" },
+    }, function(code, body)
       on_bridge_response(code, body)
     end)
   end)
@@ -516,15 +591,33 @@ function CODEX_MONITOR_APP.start()
   load_config()
   load_weather_city()
 
-  app.root = lv.obj(nil) -- 实机验证点：根屏幕创建
-  lv.obj_set_size(app.root, 320, 240)
+  if lv_scr_act then
+    app.root = lv_scr_act()
+    app.owns_screen = false
+    if lv_obj_clean then pcall(lv_obj_clean, app.root) end
+  elseif lv and lv.obj then
+    app.root = lv.obj(nil)
+    app.owns_screen = true
+  end
+  pcall(function()
+    if lv_obj_set_size then lv_obj_set_size(app.root, 320, 240)
+    elseif lv then lv.obj_set_size(app.root, 320, 240) end
+  end)
 
   build_ui()
 
-  key.on(key.LEFT, function() CODEX_MONITOR_APP.on_key("left") end) -- 实机验证点：按键常量与注册
-  key.on(key.RIGHT, function() CODEX_MONITOR_APP.on_key("right") end)
-  key.on(key.HOME, function() CODEX_MONITOR_APP.on_key("home") end)
-  app.key_registered = true
+  if key and key.on then
+    key.on(key.LEFT, function(evt_type)
+      if evt_type == nil or evt_type == key.SHORT then CODEX_MONITOR_APP.on_key("left") end
+    end)
+    key.on(key.RIGHT, function(evt_type)
+      if evt_type == nil or evt_type == key.SHORT then CODEX_MONITOR_APP.on_key("right") end
+    end)
+    key.on(key.HOME, function(evt_type)
+      if evt_type == nil or evt_type == key.SHORT then CODEX_MONITOR_APP.on_key("home") end
+    end)
+    app.key_registered = true
+  end
 
   CODEX_MONITOR_APP.render_page(1)
   restart_rotation()
@@ -566,4 +659,8 @@ end
 -- 系统注册钩子（实机验证点：Cubic 应用注册约定）。
 if app_register ~= nil and type(app_register.reg) == "function" then
   app_register.reg(APP_ID, { start = CODEX_MONITOR_APP.start, stop = CODEX_MONITOR_APP.stop })
+end
+
+if CODEX_MONITOR_APP and not CODEX_MONITOR_APP.running then
+  pcall(CODEX_MONITOR_APP.start)
 end
