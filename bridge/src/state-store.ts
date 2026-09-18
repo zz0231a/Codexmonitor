@@ -1,4 +1,5 @@
 import type { BridgeSnapshot } from "./model.js";
+import { DEFAULT_SOURCE_HEALTH, type BridgeSource, type SourceHealth } from "./event-model.js";
 
 export interface StateStore {
   /** 写入一次新的归一化快照并刷新最后更新时间。 */
@@ -8,11 +9,14 @@ export interface StateStore {
   current(): BridgeSnapshot | null;
   /** 最近一次成功更新的 Unix 秒时间戳；从未更新为 0。 */
   lastUpdatedAt(): number;
+  updateSourceHealth(source: BridgeSource, patch: Partial<SourceHealth[BridgeSource]>): void;
+  sourceHealth(): SourceHealth;
 }
 
 export function createStateStore(now: () => number = () => Math.floor(Date.now() / 1000)): StateStore {
   let snapshot: BridgeSnapshot | null = null;
   let updatedAt = 0;
+  let health: SourceHealth = structuredClone(DEFAULT_SOURCE_HEALTH);
   return {
     update(next) {
       snapshot = { ...next };
@@ -23,5 +27,9 @@ export function createStateStore(now: () => number = () => Math.floor(Date.now()
     },
     current: () => snapshot,
     lastUpdatedAt: () => updatedAt,
+    updateSourceHealth(source, patch) {
+      health = { ...health, [source]: { ...health[source], ...patch } };
+    },
+    sourceHealth: () => structuredClone(health),
   };
 }
