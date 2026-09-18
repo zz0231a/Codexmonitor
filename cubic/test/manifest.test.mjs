@@ -7,6 +7,15 @@ test("manifest declares a community regular app", async () => {
   assert.match(raw, /kind\s*=\s*app/);
   assert.match(raw, /entry\s*=\s*main\.lua/);
   assert.match(raw, /catalog_scope\s*=\s*community/);
+  assert.match(raw, /name\s*=\s*Codex Monitor/);
+  assert.match(raw, /name_zh\s*=\s*Codex 状态监视/);
+  assert.match(raw, /name_zh_cn\s*=\s*Codex 状态监视/);
+  assert.match(raw, /name_en\s*=\s*Codex Monitor/);
+  assert.match(raw, /category\s*=\s*tool/);
+  assert.match(raw, /icon\s*=\s*main\.png/);
+  assert.match(raw, /description\s*=\s*Privacy-safe Codex status and usage monitor/);
+  assert.match(raw, /description_zh\s*=\s*在 Cubic 上显示经过隐私过滤的 Codex 状态、活动与用量/);
+  assert.match(raw, /version\s*=\s*0\.2\.0/);
 });
 
 test("package contains the required files", async () => {

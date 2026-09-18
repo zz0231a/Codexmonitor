@@ -24,7 +24,7 @@
   <h1>CODEX MONITOR</h1>
   <div class="panel">
     <label for="host">桥接程序 IP（Windows 电脑局域网地址）</label>
-    <input id="host" type="text" placeholder="192.168.1.10" autocomplete="off">
+    <input id="host" type="text" placeholder="例如 192.168.1.10" autocomplete="off">
     <label for="port">端口</label>
     <input id="port" type="text" inputmode="numeric" placeholder="8973" autocomplete="off">
     <label for="label">设备备注（可选）</label>
@@ -34,14 +34,12 @@
       <button id="test">测试连接</button>
     </div>
     <div id="result"></div>
-    <p class="note">连接测试只读取 <code>/api/v1/health</code>，不会发送任何写请求。配置保存在本应用目录，不修改系统天气设置。</p>
+    <p class="note">连接测试只读取 <code>/api/v1/health</code>，显示 Bridge / Codex / Hook / JSONL 与最后更新时间。配置保存在本应用目录，不修改系统天气设置。</p>
   </div>
 <script>
 "use strict";
-// 与 main.lua 使用同一个配置路径
 var CONFIG_PATH = "/sd/apps/codex_monitor/config.json";
 
-// 文件写入适配层（实机验证点：Cubic WebUI 暴露的写文件接口，按实机能力实现）
 function writeConfigFile(text) {
   if (window.cubic && typeof window.cubic.fileWrite === "function") return window.cubic.fileWrite(CONFIG_PATH, text);
   if (window.file && typeof window.file.write === "function") return window.file.write(CONFIG_PATH, text);
@@ -60,6 +58,22 @@ function show(text, cls) {
   el.className = cls || "";
 }
 
+function validHost(host) {
+  if (!host) return false;
+  if (/[\s/?#\u0000-\u001f]/.test(host)) return false;
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+    return host.split(".").every(function (part) {
+      var n = Number(part);
+      return n >= 0 && n <= 255;
+    });
+  }
+  return /^[A-Za-z0-9][A-Za-z0-9.-]*[A-Za-z0-9]$/.test(host) || /^[A-Za-z0-9]$/.test(host);
+}
+
+function validPort(port) {
+  return Number.isInteger(port) && port >= 1 && port <= 65535;
+}
+
 function currentConfig() {
   return {
     host: document.getElementById("host").value.trim(),
@@ -68,9 +82,17 @@ function currentConfig() {
   };
 }
 
+function validateConfig(cfg) {
+  if (!cfg.host) return "请先填写桥接程序 IP";
+  if (!validHost(cfg.host)) return "主机地址无效";
+  if (!validPort(cfg.port)) return "端口必须是 1 到 65535 的整数";
+  return "";
+}
+
 document.getElementById("save").addEventListener("click", function () {
   var cfg = currentConfig();
-  if (!cfg.host) { show("请先填写桥接程序 IP", "err"); return; }
+  var error = validateConfig(cfg);
+  if (error) { show(error, "err"); return; }
   writeConfigFile(JSON.stringify(cfg)).then(function () {
     show("已保存到 " + CONFIG_PATH, "ok");
   }).catch(function (err) {
@@ -80,18 +102,27 @@ document.getElementById("save").addEventListener("click", function () {
 
 document.getElementById("test").addEventListener("click", function () {
   var cfg = currentConfig();
-  if (!cfg.host) { show("请先填写桥接程序 IP", "err"); return; }
+  var error = validateConfig(cfg);
+  if (error) { show(error, "err"); return; }
   show("测试中…");
   fetch("http://" + cfg.host + ":" + cfg.port + "/api/v1/health", { cache: "no-store" })
     .then(function (res) { return res.json().then(function (body) { return { code: res.status, body: body }; }); })
     .then(function (r) {
-      var lines = ["桥接程序：" + r.body.bridge, "Codex 连接：" + (r.body.codex_connected ? "正常" : "断开")];
+      var sources = r.body.sources || {};
+      var hook = sources.hook || {};
+      var jsonl = sources.jsonl || {};
+      var lines = [
+        "Bridge：" + (r.body.bridge || "--"),
+        "Codex：" + (r.body.codex_connected ? "正常" : "断开"),
+        "Hook：" + (hook.connected ? "已连接" : "未连接"),
+        "JSONL：" + (jsonl.available ? "可用" : "不可用"),
+        "最后更新：" + (r.body.last_updated_at || 0)
+      ];
       show(lines.join("\n") + (r.code === 200 ? "" : "\n(HTTP " + r.code + ")"), r.code === 200 ? "ok" : "warn");
     })
     .catch(function () { show("无法连接桥接程序，请检查 IP、端口与网络", "err"); });
 });
 
-// 载入已有配置
 readConfigFile().then(function (raw) {
   if (!raw) return;
   try {

@@ -61,7 +61,7 @@ end
 -- 配置与状态模型
 -- ---------------------------------------------------------------------------
 
-local DEFAULT_HOST = "192.168.1.10"
+local DEFAULT_HOST = ""
 local DEFAULT_PORT = 8973
 local HTTP_TIMEOUT_MS = 2000
 local OFFLINE_AFTER_FAILURES = 3
@@ -90,16 +90,56 @@ app.state = {
 
 local VALID_STATUS = { idle = true, working = true, needs_user = true, done = true, error = true, offline = true }
 
+local function valid_host(host)
+  if type(host) ~= "string" or #host == 0 then return false end
+  if host:find("[%s/?#]") or host:find("%c") then return false end
+  if host:match("^%d+%.%d+%.%d+%.%d+$") then
+    for octet in host:gmatch("%d+") do
+      local n = tonumber(octet)
+      if n == nil or n < 0 or n > 255 then return false end
+    end
+    return true
+  end
+  if host:match("^[%a%d]$") or host:match("^[%a%d][%a%d%-%.]*[%a%d]$") then return true end
+  return false
+end
+
+local function valid_port(port)
+  local n = tonumber(port)
+  if n == nil or n ~= math.floor(n) then return false end
+  return n >= 1 and n <= 65535
+end
+
 local function load_config()
   -- 与 package/main.html 使用同一个配置路径（WebUI 写入，Lua 读取）
   local ok, raw = pcall(function() return file.read(APP_DIR .. "config.json") end) -- 实机验证点：Cubic file API
   if not ok or type(raw) ~= "string" then return end
   local okd, cfg = pcall(sjson.decode, raw)
   if not okd or type(cfg) ~= "table" then return end
-  if type(cfg.host) == "string" and #cfg.host > 0 then
+  if valid_host(cfg.host) then
     app.config.host = cfg.host
   end
-  app.config.port = tonumber(cfg.port) or app.config.port
+  if valid_port(cfg.port) then
+    app.config.port = tonumber(cfg.port)
+  end
+end
+
+local function load_weather_city()
+  local city = nil
+  pcall(function()
+    if settings ~= nil and type(settings.get) == "function" then
+      city = settings.get("weather.city") or settings.get("city")
+    elseif settings ~= nil and type(settings.city) == "string" then
+      city = settings.city
+    end
+  end)
+  if type(city) == "string" and #city > 0 then
+    city = city:gsub("[%z\1-\31]", " "):gsub("^%s+", ""):gsub("%s+$", "")
+    if #city > 40 then city = city:sub(1, 40) end
+    app.state.weather = { city = city }
+  else
+    app.state.weather = { city = nil }
+  end
 end
 
 -- ---------------------------------------------------------------------------
@@ -264,8 +304,8 @@ function CODEX_MONITOR_APP.render_overview()
   else
     set_text(ui.task_context, "CTX --")
   end
-  -- 天气面板：Task 4 接入 Cubic 系统天气，此前显示 --
-  set_text(ui.weather_city, "--")
+  -- 天气：只读取系统设置中的城市名；用量类指标在固件天气 API 未验证前保持 --
+  set_text(ui.weather_city, (st.weather and st.weather.city) or "--")
   set_text(ui.weather_temp, "--")
   set_text(ui.weather_meta, "--")
   render_usage(ui.usage_5h, ui.usage_5h_reset, "5H", st.usage.five_hour)
@@ -453,6 +493,10 @@ end
 
 local function poll_bridge()
   if not app.running then return end
+  if not valid_host(app.config.host) or not valid_port(app.config.port) then
+    on_bridge_failure()
+    return
+  end
   local url = "http://" .. app.config.host .. ":" .. tostring(app.config.port) .. "/api/v1/status"
   local ok = pcall(function()
     http.get(url, { timeout = HTTP_TIMEOUT_MS }, function(code, body) -- 实机验证点：http 异步签名
@@ -470,6 +514,7 @@ function CODEX_MONITOR_APP.start()
   if app.running then return end
   app.running = true
   load_config()
+  load_weather_city()
 
   app.root = lv.obj(nil) -- 实机验证点：根屏幕创建
   lv.obj_set_size(app.root, 320, 240)
