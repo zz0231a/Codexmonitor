@@ -1,0 +1,5 @@
+{"timestamp":"2026-09-18T00:00:00Z","type":"session_meta","payload":{"id":"raw-session","cwd":"C:\\Users\\me\\project"}}
+{"timestamp":"2026-09-18T00:00:01Z","type":"event_msg","payload":{"type":"user_message","message":"DO_NOT_LEAK_PROMPT"}}
+{"timestamp":"2026-09-18T00:00:02Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"DO_NOT_LEAK_ARGS"}}
+{"timestamp":"2026-09-18T00:00:03Z","type":"event_msg","payload":{"type":"token_count","info":{"model_context_window":100000,"last_token_usage":{"total_tokens":25000},"rate_limits":[{"windowDurationMins":300,"usedPercent":20,"resetsAt":1800000000},{"windowDurationMins":10080,"usedPercent":60,"resetsAt":1800600000}]}}}
+{"timestamp":"2026-09-18T00:00:04Z","type":"event_msg","payload":{"type":"task_complete","last_agent_message":"DO_NOT_LEAK_REPLY"}}
