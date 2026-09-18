@@ -3,8 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test --import tsx test/*.test.ts",
-    "start": "tsx src/main.ts"
+    "test": "node --test --import tsx test/*.test.ts test/*.test.mjs",
+    "start": "tsx src/main.ts",
+    "hook": "tsx src/hook-cli.ts",
+    "typecheck": "tsc --noEmit",
+    "install:dry-run": "node scripts/manage-installation.mjs --dry-run",
+    "install:hooks": "node scripts/manage-installation.mjs --install",
+    "uninstall:hooks": "node scripts/manage-installation.mjs --uninstall"
   },
   "devDependencies": {
     "@types/node": "^22.20.3",
