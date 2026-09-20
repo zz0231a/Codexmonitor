@@ -116,3 +116,21 @@ test("allowlist blocks clients that are not the configured device", async () => 
   assert.equal((await fetch(`${open.url}/api/v1/status`)).status, 200);
   await open.close();
 });
+
+test("read-only API allows browser origins whose host is in the device allowlist", async () => {
+  const store = createStateStore();
+  store.update(normalizeCodexSnapshot({ tasks: [] }));
+  const server = await createStatusServer(store, { host: "127.0.0.1", port: 0, allow: ["127.0.0.1"] });
+
+  const allowed = await fetch(`${server.url}/api/v1/health`, {
+    headers: { Origin: "http://127.0.0.1" },
+  });
+  assert.equal(allowed.headers.get("access-control-allow-origin"), "http://127.0.0.1");
+  assert.equal(allowed.headers.get("vary"), "Origin");
+
+  const blocked = await fetch(`${server.url}/api/v1/health`, {
+    headers: { Origin: "http://192.168.1.99" },
+  });
+  assert.equal(blocked.headers.get("access-control-allow-origin"), null);
+  await server.close();
+});

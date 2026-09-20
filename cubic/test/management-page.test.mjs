@@ -1,6 +1,38 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import vm from "node:vm";
+
+async function loadManagementPage(fetchImpl) {
+  const html = await readFile("package/main.html", "utf8");
+  const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+  assert.ok(script, "management page script must exist");
+  const elements = new Map();
+  const element = (id) => {
+    if (!elements.has(id)) {
+      elements.set(id, {
+        value: "",
+        textContent: "",
+        className: "",
+        addEventListener() {},
+      });
+    }
+    return elements.get(id);
+  };
+  const context = {
+    console,
+    Promise,
+    JSON,
+    Number,
+    Error,
+    fetch: fetchImpl,
+    window: {},
+    document: { getElementById: element },
+  };
+  vm.createContext(context);
+  vm.runInContext(script, context);
+  return context;
+}
 
 test("management page renders source status fields", async () => {
   const html = await readFile("package/main.html", "utf8");
@@ -30,4 +62,19 @@ test("package host default is empty and port default remains 8973", async () => 
   assert.match(lua, /DEFAULT_PORT\s*=\s*8973/);
   assert.match(html, /placeholder="8973"/);
   assert.equal(/value="192\.168\.\d+\.\d+"/.test(html), false);
+});
+
+test("management page persists config through the Cubic 1.212 filesystem HTTP API", async () => {
+  const requests = [];
+  const page = await loadManagementPage(async (url, init = {}) => {
+    requests.push({ url, init });
+    return { ok: true, text: async () => "" };
+  });
+
+  await page.writeConfigFile('{"host":"10.23.2.0","port":8973}');
+
+  const write = requests.find((request) => request.init.method === "PUT");
+  assert.equal(write.url, "/api/system/fs/upload?path=%2Fsd%2Fapps%2Fcodex_monitor%2Fconfig.json");
+  assert.equal(write.init.headers["Content-Type"], "application/json; charset=utf-8");
+  assert.equal(write.init.body, '{"host":"10.23.2.0","port":8973}');
 });

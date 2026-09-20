@@ -38,9 +38,29 @@ function normalizeRemoteAddress(address: string | undefined): string {
   return address.startsWith("::ffff:") ? address.slice(7) : address;
 }
 
-function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
+function corsHeaders(origin: string | undefined, allow: string[]): Record<string, string> {
+  if (!origin) return {};
+  try {
+    const parsed = new URL(origin);
+    if ((parsed.protocol === "http:" || parsed.protocol === "https:") && allow.includes(parsed.hostname)) {
+      return { "Access-Control-Allow-Origin": origin, Vary: "Origin" };
+    }
+  } catch {}
+  return {};
+}
+
+function sendJson(
+  res: http.ServerResponse,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+): void {
   const payload = JSON.stringify(body);
-  res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    ...headers,
+  });
   res.end(payload);
 }
 
@@ -64,8 +84,9 @@ export async function createStatusServer(store: StateStore, config: ServerConfig
       sendJson(res, 403, { error: "forbidden" });
       return;
     }
+    const responseHeaders = corsHeaders(req.headers.origin, allow);
     if (path === "/api/v1/status") {
-      sendJson(res, 200, buildPublicSnapshot(store.current(), store.lastUpdatedAt()));
+      sendJson(res, 200, buildPublicSnapshot(store.current(), store.lastUpdatedAt()), responseHeaders);
       return;
     }
     if (path === "/api/v1/health") {
@@ -85,10 +106,10 @@ export async function createStatusServer(store: StateStore, config: ServerConfig
             last_record_at: sources.jsonl.lastRecordAt,
           },
         },
-      });
+      }, responseHeaders);
       return;
     }
-    sendJson(res, 404, { error: "not_found" });
+    sendJson(res, 404, { error: "not_found" }, responseHeaders);
   });
   await new Promise<void>((resolve) => server.listen(config.port ?? 0, host, resolve));
   const address = server.address();

@@ -41,15 +41,23 @@
 var CONFIG_PATH = "/sd/apps/codex_monitor/config.json";
 
 function writeConfigFile(text) {
-  if (window.cubic && typeof window.cubic.fileWrite === "function") return window.cubic.fileWrite(CONFIG_PATH, text);
-  if (window.file && typeof window.file.write === "function") return window.file.write(CONFIG_PATH, text);
-  return Promise.reject(new Error("当前环境不支持写入配置文件"));
+  return fetch("/api/system/fs/upload?path=" + encodeURIComponent(CONFIG_PATH), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+    body: text,
+    cache: "no-store"
+  }).then(function (res) {
+    if (!res.ok) throw new Error("HTTP " + res.status);
+  });
 }
 
 function readConfigFile() {
-  if (window.cubic && typeof window.cubic.fileRead === "function") return window.cubic.fileRead(CONFIG_PATH);
-  if (window.file && typeof window.file.read === "function") return window.file.read(CONFIG_PATH);
-  return Promise.resolve(null);
+  return fetch("/api/system/fs/file?path=" + encodeURIComponent(CONFIG_PATH), { cache: "no-store" })
+    .then(function (res) {
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return res.text();
+    });
 }
 
 function show(text, cls) {
