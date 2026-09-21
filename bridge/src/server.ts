@@ -1,6 +1,7 @@
 import http from "node:http";
 import type { StateStore } from "./state-store.js";
 import type { BridgeSnapshot } from "./model.js";
+import { EMPTY_TOKEN_MONITOR, type TokenMonitorSnapshot } from "./token-monitor.js";
 
 export interface ServerConfig {
   host?: string;
@@ -19,7 +20,34 @@ export interface RunningServer {
  * 顶层字段用 snake_case（设计文档约定），嵌套对象保持模型 camelCase。
  * 只包含已通过 normalizer 脱敏的字段。
  */
-export function buildPublicSnapshot(snapshot: BridgeSnapshot | null, lastUpdatedAt: number) {
+function publicTokenMonitor(snapshot: TokenMonitorSnapshot | null) {
+  const value = snapshot ?? EMPTY_TOKEN_MONITOR;
+  return {
+    available: value.available,
+    stale: value.stale,
+    updatedAt: value.updatedAt,
+    tools: value.tools.map((tool) => ({
+      id: tool.id,
+      rank: tool.rank,
+      remainingPercent: tool.remainingPercent,
+      window: tool.window,
+      todayTokens: tool.todayTokens ?? null,
+    })),
+    rate: {
+      tokensPerMin: value.rate.tokensPerMin,
+      idle: value.rate.idle,
+    },
+    today: value.today,
+    last7: value.last7,
+    allTime: value.allTime,
+  };
+}
+
+export function buildPublicSnapshot(
+  snapshot: BridgeSnapshot | null,
+  lastUpdatedAt: number,
+  tokenMonitor: TokenMonitorSnapshot | null = null,
+) {
   return {
     schemaVersion: 1 as const,
     server_time: Math.floor(Date.now() / 1000),
@@ -30,6 +58,7 @@ export function buildPublicSnapshot(snapshot: BridgeSnapshot | null, lastUpdated
     activities: snapshot ? snapshot.activities : [],
     usage: { windows: snapshot ? snapshot.usage : [] },
     other_active_task_count: snapshot ? snapshot.otherActiveTaskCount : 0,
+    token_monitor: publicTokenMonitor(tokenMonitor),
   };
 }
 
@@ -86,7 +115,7 @@ export async function createStatusServer(store: StateStore, config: ServerConfig
     }
     const responseHeaders = corsHeaders(req.headers.origin, allow);
     if (path === "/api/v1/status") {
-      sendJson(res, 200, buildPublicSnapshot(store.current(), store.lastUpdatedAt()), responseHeaders);
+      sendJson(res, 200, buildPublicSnapshot(store.current(), store.lastUpdatedAt(), store.tokenMonitor()), responseHeaders);
       return;
     }
     if (path === "/api/v1/health") {
@@ -104,6 +133,11 @@ export async function createStatusServer(store: StateStore, config: ServerConfig
             available: sources.jsonl.available,
             file_found: sources.jsonl.fileFound,
             last_record_at: sources.jsonl.lastRecordAt,
+          },
+          token_monitor: {
+            available: sources.tokenMonitor.available,
+            stale: sources.tokenMonitor.stale,
+            last_updated_at: sources.tokenMonitor.lastUpdatedAt,
           },
         },
       }, responseHeaders);
