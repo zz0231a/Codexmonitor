@@ -38,6 +38,7 @@ test("main.lua owns a safe state model with offline and last_update", async () =
   assert.match(lua, /seven_day/);
   assert.match(lua, /weather/);
   assert.match(lua, /activities/);
+  assert.match(lua, /token_monitor/);
 });
 
 test("main.lua locates usage windows by duration, not by order", async () => {

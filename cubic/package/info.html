@@ -4,22 +4,21 @@
 <meta charset="utf-8">
 <title>Codex Monitor</title>
 <style>
-  body { background:#0c0e14; color:#d5dbe5; font-family:monospace; margin:24px; }
-  h1 { color:#4ade80; font-size:20px; }
+  body { background:#0a0e17; color:#d5dbe5; font-family:monospace; margin:24px; }
+  h1 { color:#4ade80; font-size:20px; letter-spacing:1px; }
   .tag { color:#facc15; }
   p, li { font-size:13px; line-height:1.7; }
   code { color:#7dd3fc; }
 </style>
 </head>
 <body>
-  <h1>Codex Monitor <span class="tag">v0.2.0</span></h1>
-  <p>在 Cubic 副屏上实时显示本机 Codex 工作状态、主任务、近期活动与 5 小时 / 7 天剩余用量，并跟随系统设置显示天气。</p>
-  <h1>Codex Monitor</h1>
-  <p>Shows live Codex status, primary task, recent activities, 5-hour / 7-day usage, and system weather on your Cubic secondary screen.</p>
+  <h1>Codex Monitor <span class="tag">v0.5.0</span></h1>
+  <p>在 Cubic 副屏上以深色驾驶舱显示本机 Codex 状态、主任务，以及 Token Monitor 总用量前八的工具额度。设备内置字体只有 ASCII 字形，屏幕文案使用英文。</p>
   <ul>
-    <li>两页界面每 30 秒自动轮播，<code>LEFT</code> / <code>RIGHT</code> 手动切换，<code>HOME</code> 退出</li>
+    <li>单页界面，<code>HOME</code> 退出</li>
     <li>数据来自局域网 Windows 桥接程序的只读接口，不包含提示词、回复正文或命令参数</li>
     <li>首次使用请在应用设置页填写桥接程序 IP 与端口并测试连接</li>
+    <li>天气温度等字段在固件接口未验证前保持 <code>--</code></li>
   </ul>
 </body>
 </html>

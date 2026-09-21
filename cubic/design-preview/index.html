@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Codex Monitor · 320×240 副屏 UI 方案预览</title>
+<style>
+/* ============ 页面框架 ============ */
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0B0D12;color:#C9D1E0;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;padding:48px 56px 72px;}
+.page-title{font-size:30px;font-weight:700;color:#E8ECF5;letter-spacing:1px}
+.page-sub{color:#8A93A6;margin-top:10px;font-size:14px;line-height:1.7}
+.scheme{margin-top:72px}
+.scheme-head{display:flex;align-items:baseline;gap:18px;border-bottom:1px solid #1E2533;padding-bottom:14px}
+.scheme-num{font-size:12px;color:#5A6376;letter-spacing:3px;font-family:Consolas,monospace}
+.scheme-name{font-size:22px;font-weight:700;color:#E8ECF5}
+.scheme-idea{color:#8A93A6;font-size:13px}
+.row{display:flex;gap:40px;margin-top:30px}
+.slot{width:640px;flex:none}
+.bezel{width:640px;height:480px;border-radius:12px;overflow:hidden;outline:1px solid #2A3342;outline-offset:5px;background:#000}
+.scr{width:320px;height:240px;transform:scale(2);transform-origin:top left;position:relative;overflow:hidden}
+.meta{margin-top:16px;font-size:12px;color:#7B8498;line-height:1.6}
+.meta b{color:#D5DBE5;font-size:13px}
+.notes{margin-top:26px;background:#10141D;border:1px solid #1E2533;border-radius:10px;padding:14px 20px;font-size:13px;color:#98A2B8;line-height:1.8;max-width:2040px}
+.notes b{color:#D5DBE5}
+.tag{display:inline-block;background:#1A2130;border-radius:4px;padding:1px 8px;margin-right:6px;font-size:12px;color:#9FB0CC}
+
+/* ============ 方案一：深色驾驶舱 ============ */
+.s1{background:linear-gradient(160deg,#101624 0%,#0A0E17 100%);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:#D5DBE5;padding:9px;display:flex;flex-direction:column;gap:6px;justify-content:space-between}
+.s1 .card{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:7px}
+.s1-top{display:flex;justify-content:space-between;align-items:stretch}
+.s1-codex{font-size:8px;letter-spacing:2.5px;color:#8A93A6;display:flex;align-items:center;gap:5px;font-weight:600}
+.s1 .dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.s1 .dot.green{background:#4ADE80;box-shadow:0 0 5px rgba(74,222,128,.9)}
+.s1 .dot.yellow{background:#FACC15;box-shadow:0 0 5px rgba(250,204,21,.9)}
+.s1-state{font-size:21px;font-weight:800;letter-spacing:1px;line-height:1.15;margin-top:1px}
+.s1-state.green{color:#4ADE80;text-shadow:0 0 8px rgba(74,222,128,.45)}
+.s1-state.yellow{color:#FACC15;text-shadow:0 0 8px rgba(250,204,21,.45)}
+.s1-sub{font-size:8px;color:#8A93A6;margin-top:1px}
+.s1-weather{background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);border-radius:7px;padding:5px 9px;text-align:right;min-width:74px}
+.s1-weather .w-city{font-size:8px;color:#8A93A6;letter-spacing:1px}
+.s1-weather .w-temp{font-size:16px;font-weight:700;color:#E8ECF5;line-height:1.15}
+.s1-weather .w-note{font-size:8px;color:#8A93A6}
+.s1-task{padding:6px 9px;font-size:11px;font-weight:600;color:#E8ECF5;display:flex;align-items:center;gap:7px}
+.s1-task .ticon{flex:none;width:4px;height:14px;border-radius:2px;background:#4ADE80}
+.s1-task.warn .ticon{background:#FACC15}
+.s1-task.warn{border-color:rgba(250,204,21,.35)}
+.s1-mid{display:flex;gap:6px}
+.s1-ctx{flex:1;display:flex;align-items:center;gap:9px;padding:5px 9px}
+.s1 .ring{width:38px;height:38px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center}
+.s1 .ring.g42{background:conic-gradient(#4ADE80 0 42%,rgba(255,255,255,.08) 42% 100%)}
+.s1 .ring .hole{width:28px;height:28px;border-radius:50%;background:#121826;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#E8ECF5}
+.s1-ctx .lbl,.s1-model .lbl{font-size:7px;letter-spacing:2px;color:#8A93A6}
+.s1-ctx .cap{font-size:8px;color:#8A93A6;margin-top:2px}
+.s1-model{flex:1.2;display:flex;flex-direction:column;justify-content:center;padding:5px 10px;gap:3px}
+.s1-model .val{font-size:11px;font-weight:700;color:#E8ECF5;font-family:Consolas,monospace}
+.s1-bars{padding:6px 9px;display:flex;flex-direction:column;gap:7px}
+.s1 .bar-row{display:flex;align-items:center;gap:6px;font-size:8px}
+.s1 .bl{width:16px;color:#8A93A6;font-weight:700;letter-spacing:1px;flex:none}
+.s1 .bar{flex:1;height:7px;border-radius:4px;background:rgba(255,255,255,.08);overflow:hidden}
+.s1 .bar i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,#22C55E,#4ADE80);box-shadow:0 0 6px rgba(74,222,128,.55)}
+.s1 .bar i.amber{background:linear-gradient(90deg,#D97706,#FACC15);box-shadow:0 0 6px rgba(250,204,21,.55)}
+.s1 .bp{width:26px;color:#E8ECF5;font-weight:700;flex:none}
+.s1 .br{width:64px;color:#8A93A6;text-align:right;flex:none}
+/* 方案一 第2页 */
+.s1h{display:flex;align-items:center;justify-content:space-between}
+.s1h .t{font-size:12px;font-weight:800;letter-spacing:2px;color:#E8ECF5}
+.s1h .c{font-size:8px;color:#8A93A6}
+.s1-act{flex:1;display:flex;flex-direction:column;gap:4px;min-height:0}
+.s1 .arow{display:flex;align-items:center;gap:7px;padding:3px 8px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.06);border-radius:6px;flex:1}
+.s1 .arow .ic{flex:none;width:14px;height:14px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800}
+.s1 .arow .tx{font-size:9px;color:#D5DBE5;line-height:1.25}
+.s1 .arow .tx small{display:block;font-size:7.5px;color:#8A93A6;font-family:Consolas,monospace;line-height:1.3}
+.s1 .arow .tm{margin-left:auto;font-size:8px;color:#5A6376;flex:none}
+.s1-foot{display:flex;align-items:center;gap:7px;font-size:8px;color:#8A93A6;padding:4px 8px;flex:none}
+.s1-foot .mono{font-family:Consolas,monospace;color:#C9D1E0}
+.s1 .pill{flex:none;font-size:8px;font-weight:700;border-radius:8px;padding:2px 7px}
+.s1 .pill.y{background:rgba(250,204,21,.15);color:#FACC15;border:1px solid rgba(250,204,21,.4)}
+.s1-foot .more{margin-left:auto;flex:none}
+</style>
+</head>
+<body>
+
+<div class="page-title">Codex Monitor · 副屏 UI 方案预览</div>
+<div class="page-sub">目标设备 320×240（LVGL）· 每块屏按实机逻辑像素绘制，CSS 2x 放大展示 · 同一组示例数据 · 状态语义色：绿=正常/完成，黄=需要注意，红=错误，灰=离线</div>
+
+<!-- ================= 方案一 ================= -->
+<div class="scheme">
+  <div class="scheme-head">
+    <span class="scheme-num">01</span>
+    <span class="scheme-name">深色驾驶舱 / Dashboard</span>
+    <span class="scheme-idea">卡片分区 + 发光进度条 + CTX 环形仪表，像智能手表 / 车机仪表，一眼读取状态</span>
+  </div>
+  <div class="row">
+
+    <div class="slot">
+      <div class="bezel"><div class="scr s1">
+        <div class="s1-top">
+          <div>
+            <div class="s1-codex"><span class="dot green"></span>CODEX</div>
+            <div class="s1-state green">WORKING</div>
+            <div class="s1-sub">任务进行中 · 一切正常</div>
+          </div>
+          <div class="s1-weather">
+            <div class="w-city">上海</div>
+            <div class="w-temp">24°</div>
+            <div class="w-note">多云</div>
+          </div>
+        </div>
+        <div class="s1-task card"><span class="ticon"></span>修复登录页样式回归问题</div>
+        <div class="s1-mid">
+          <div class="s1-ctx card">
+            <div class="ring g42"><div class="hole">42%</div></div>
+            <div><div class="lbl">CTX</div><div class="cap">上下文占用</div></div>
+          </div>
+          <div class="s1-model card">
+            <div class="lbl">MODEL</div>
+            <div class="val">gpt-5.1-codex</div>
+          </div>
+        </div>
+        <div class="s1-bars card">
+          <div class="bar-row"><span class="bl">5H</span><div class="bar"><i style="width:73%"></i></div><span class="bp">73%</span><span class="br">重置 18:30</span></div>
+          <div class="bar-row"><span class="bl">7D</span><div class="bar"><i style="width:41%"></i></div><span class="bp">41%</span><span class="br">重置 周四 09:12</span></div>
+        </div>
+      </div></div>
+      <div class="meta"><b>第 1 页 · 正常态（WORKING）</b><br>实机 320×240 · 2x 放大</div>
+    </div>
+
+    <div class="slot">
+      <div class="bezel"><div class="scr s1">
+        <div class="s1-top">
+          <div>
+            <div class="s1-codex"><span class="dot yellow"></span>CODEX</div>
+            <div class="s1-state yellow">NEEDS USER</div>
+            <div class="s1-sub">等待你的确认 / 输入</div>
+          </div>
+          <div class="s1-weather">
+            <div class="w-city">上海</div>
+            <div class="w-temp">24°</div>
+            <div class="w-note">多云</div>
+          </div>
+        </div>
+        <div class="s1-task card warn"><span class="ticon"></span>修复登录页样式回归问题</div>
+        <div class="s1-mid">
+          <div class="s1-ctx card">
+            <div class="ring g42"><div class="hole">42%</div></div>
+            <div><div class="lbl">CTX</div><div class="cap">上下文占用</div></div>
+          </div>
+          <div class="s1-model card">
+            <div class="lbl">MODEL</div>
+            <div class="val">gpt-5.1-codex</div>
+          </div>
+        </div>
+        <div class="s1-bars card">
+          <div class="bar-row"><span class="bl">5H</span><div class="bar"><i class="amber" style="width:73%"></i></div><span class="bp">73%</span><span class="br">重置 18:30</span></div>
+          <div class="bar-row"><span class="bl">7D</span><div class="bar"><i style="width:41%"></i></div><span class="bp">41%</span><span class="br">重置 周四 09:12</span></div>
+        </div>
+      </div></div>
+      <div class="meta"><b>第 1 页 · 警示态（NEEDS USER）</b><br>实机 320×240 · 2x 放大</div>
+    </div>
+
+    <div class="slot">
+      <div class="bezel"><div class="scr s1">
+        <div class="s1h"><span class="t">ACTIVITIES</span><span class="c">最近 5 条</span></div>
+        <div class="s1-act">
+          <div class="arow"><span class="ic" style="background:rgba(74,222,128,.15);color:#4ADE80">$</span><span class="tx">执行 Bash 命令<small>npm test</small></span><span class="tm">12:03</span></div>
+          <div class="arow"><span class="ic" style="background:rgba(96,165,250,.15);color:#60A5FA">✎</span><span class="tx">编辑文件<small>src/main.ts</small></span><span class="tm">12:01</span></div>
+          <div class="arow"><span class="ic" style="background:rgba(96,165,250,.15);color:#60A5FA">◫</span><span class="tx">读取文件<small>package.json</small></span><span class="tm">11:58</span></div>
+          <div class="arow"><span class="ic" style="background:rgba(74,222,128,.15);color:#4ADE80">⌕</span><span class="tx">搜索代码<small>grep -r</small></span><span class="tm">11:55</span></div>
+          <div class="arow"><span class="ic" style="background:rgba(96,165,250,.15);color:#60A5FA">✎</span><span class="tx">写入文件<small>docs/plan.md</small></span><span class="tm">11:52</span></div>
+        </div>
+        <div class="s1-foot card">
+          <span class="mono">gpt-5.1-codex</span><span>CTX 42%</span><span class="pill y">● 需要处理</span><span class="more">其他活动任务 2</span>
+        </div>
+      </div></div>
+      <div class="meta"><b>第 2 页 · 活动详情</b><br>实机 320×240 · 2x 放大</div>
+    </div>
+
+  </div>
+  <div class="notes">
+    <b>LVGL 落地：</b><span class="tag">圆角矩形 panel</span><span class="tag">bar 进度条（渐变+高光）</span><span class="tag">arc 圆弧（CTX 环）</span><span class="tag">label 字号/字重分层</span><span class="tag">圆点+文字发光可用简单阴影</span>
+    全部为 LVGL 原生控件组合，无滤镜依赖；发光感用 bar 渐变填充 + 浅色描边近似。<br>
+    <b>落地工作量：中</b> —— 卡片布局与现有页面结构差异较大，需重排两个页面容器，但每个控件都是常规用法。
+  </div>
+</div>
+
+<style>
+/* ============ 方案二：瑞士极简 ============ */
+.s2{background:#0A0A0A;color:#F2F2F2;font-family:"Helvetica Neue","Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;padding:12px 13px 10px;display:flex;flex-direction:column}
+.s2 .grid-row{display:flex;justify-content:space-between;align-items:baseline}
+.s2 .kicker{font-size:8px;letter-spacing:3px;color:#8F8F8F;font-weight:600}
+.s2 .kicker .ac{color:#E8FF47}
+.s2 .weather{font-size:8px;letter-spacing:1px;color:#BFBFBF}
+.s2 .weather b{color:#F2F2F2;font-size:11px;font-weight:700;letter-spacing:0}
+.s2 .hr{height:1px;background:#2C2C2C;margin:6px 0}
+.s2 .hr.thick{height:3px;background:#E8FF47;margin:5px 0 7px}
+.s2-state{font-size:34px;font-weight:800;letter-spacing:-1px;line-height:.95}
+.s2-state.green{color:#4ADE80}
+.s2-state.red{color:#F87171}
+.s2-task{font-size:11px;color:#D9D9D9;margin-top:5px;font-weight:600}
+.s2-usage{flex:1;display:flex;flex-direction:column;justify-content:center;gap:9px}
+.s2 .urow{display:flex;align-items:baseline;gap:8px}
+.s2 .ulabel{width:20px;font-size:9px;font-weight:700;letter-spacing:1px;color:#8F8F8F;flex:none}
+.s2 .unum{font-size:24px;font-weight:800;color:#F2F2F2;line-height:1;flex:none;min-width:56px}
+.s2 .unum small{font-size:11px;font-weight:700;color:#8F8F8F}
+.s2 .uline{flex:1;height:2px;background:#2C2C2C;position:relative;align-self:center}
+.s2 .uline i{position:absolute;left:0;top:0;bottom:0;background:#E8FF47}
+.s2 .ureset{width:64px;font-size:8px;color:#8F8F8F;text-align:right;flex:none}
+.s2-foot{display:flex;justify-content:space-between;font-size:8px;letter-spacing:1px;color:#8F8F8F}
+.s2-foot b{color:#F2F2F2;font-weight:700}
+/* 方案二 第2页 */
+.s2h{display:flex;align-items:baseline;justify-content:space-between}
+.s2h .t{font-size:17px;font-weight:800;letter-spacing:2px}
+.s2h .c{font-size:8px;color:#8F8F8F;letter-spacing:1px}
+.s2-list{flex:1;display:flex;flex-direction:column;margin-top:2px;justify-content:space-evenly}
+.s2 .lrow{display:flex;align-items:baseline;gap:9px;padding:4.5px 0;border-bottom:1px solid #222}
+.s2 .lrow:last-child{border-bottom:none}
+.s2 .idx{font-size:8px;color:#E8FF47;font-weight:700;font-family:Consolas,monospace;flex:none}
+.s2 .ltx{font-size:10px;color:#E6E6E6;font-weight:600}
+.s2 .ltx small{font-size:8px;color:#8F8F8F;font-family:Consolas,monospace;margin-left:5px}
+.s2 .ltm{margin-left:auto;font-size:8px;color:#666;font-family:Consolas,monospace;flex:none}
+.s2-foot2{display:flex;align-items:center;gap:8px;font-size:8px;color:#8F8F8F;margin-top:4px}
+.s2 .ybadge{background:#E8FF47;color:#0A0A0A;font-weight:800;font-size:8px;padding:1px 6px;letter-spacing:1px}
+.s2-foot2 .more{margin-left:auto}
+</style>
+
+<!-- ================= 方案二 ================= -->
+<div class="scheme">
+  <div class="scheme-head">
+    <span class="scheme-num">02</span>
+    <span class="scheme-name">瑞士极简 / 大字排版</span>
+    <span class="scheme-idea">黑白灰 + 柠檬黄高亮，超大状态字与百分比数字，严格网格与细分割线，像一张排版海报</span>
+  </div>
+  <div class="row">
+
+    <div class="slot">
+      <div class="bezel"><div class="scr s2">
+        <div class="grid-row">
+          <span class="kicker">CODEX<span class="ac"> ▸ </span>MONITOR</span>
+          <span class="weather">上海 <b>24°</b> 多云</span>
+        </div>
+        <div class="hr"></div>
+        <div class="s2-state green">WORKING</div>
+        <div class="hr thick"></div>
+        <div class="s2-task">修复登录页样式回归问题</div>
+        <div class="s2-usage">
+          <div class="urow"><span class="ulabel">5H</span><span class="unum">73<small>%</small></span><span class="uline"><i style="width:73%"></i></span><span class="ureset">重置 18:30</span></div>
+          <div class="urow"><span class="ulabel">7D</span><span class="unum">41<small>%</small></span><span class="uline"><i style="width:41%"></i></span><span class="ureset">重置 周四 09:12</span></div>
+        </div>
+        <div class="hr"></div>
+        <div class="s2-foot"><span>MODEL <b>gpt-5.1-codex</b></span><span>CTX <b>42%</b></span></div>
+      </div></div>
+      <div class="meta"><b>第 1 页 · 正常态（WORKING）</b><br>实机 320×240 · 2x 放大</div>
+    </div>
+
+    <div class="slot">
+      <div class="bezel"><div class="scr s2">
+        <div class="grid-row">
+          <span class="kicker">CODEX<span class="ac"> ▸ </span>MONITOR</span>
+          <span class="weather">上海 <b>24°</b> 多云</span>
+        </div>
+        <div class="hr"></div>
+        <div class="s2-state red">ERROR</div>
+        <div class="hr thick" style="background:#F87171"></div>
+        <div class="s2-task">修复登录页样式回归问题</div>
+        <div class="s2-usage">
+          <div class="urow"><span class="ulabel">5H</span><span class="unum">73<small>%</small></span><span class="uline"><i style="width:73%;background:#F87171"></i></span><span class="ureset">重置 18:30</span></div>
+          <div class="urow"><span class="ulabel">7D</span><span class="unum">41<small>%</small></span><span class="uline"><i style="width:41%"></i></span><span class="ureset">重置 周四 09:12</span></div>
+        </div>
+        <div class="hr"></div>
+        <div class="s2-foot"><span>MODEL <b>gpt-5.1-codex</b></span><span>CTX <b>42%</b></span></div>
+      </div></div>
+      <div class="meta"><b>第 1 页 · 警示态（ERROR）</b><br>实机 320×240 · 2x 放大</div>
+    </div>
+
+    <div class="slot">
+      <div class="bezel"><div class="scr s2">
+        <div class="s2h"><span class="t">ACTIVITIES</span><span class="c">05 条</span></div>
+        <div class="hr thick" style="margin-top:4px"></div>
+        <div class="s2-list">
+          <div class="lrow"><span class="idx">01</span><span class="ltx">执行 Bash 命令<small>npm test</small></span><span class="ltm">12:03</span></div>
+          <div class="lrow"><span class="idx">02</span><span class="ltx">编辑<small>src/main.ts</small></span><span class="ltm">12:01</span></div>
+          <div class="lrow"><span class="idx">03</span><span class="ltx">读取<small>package.json</small></span><span class="ltm">11:58</span></div>
+          <div class="lrow"><span class="idx">04</span><span class="ltx">搜索代码<small>grep -r</small></span><span class="ltm">11:55</span></div>
+          <div class="lrow"><span class="idx">05</span><span class="ltx">写入<small>docs/plan.md</small></span><span class="ltm">11:52</span></div>
+        </div>
+        <div class="s2-foot2">
+          <span>MODEL <b style="color:#F2F2F2">gpt-5.1-codex</b></span><span>CTX <b style="color:#F2F2F2">42%</b></span><span class="ybadge">需要处理</span><span class="more">其他活动任务 2</span>
+        </div>
+      </div></div>
+      <div class="meta"><b>第 2 页 · 活动详情</b><br>实机 320×240 · 2x 放大</div>
+    </div>
+
+  </div>
+  <div class="notes">
+    <b>LVGL 落地：</b><span class="tag">label 大字号/字重对比</span><span class="tag">1px 分割线（细矩形）</span><span class="tag">2px 细 bar 或矩形条</span><span class="tag">纯色背景</span>
+    只用文本、细线和纯色块，是三种方案里控件最少、渲染开销最低的；视觉冲击力全部来自排版网格。<br>
+    <b>落地工作量：低</b> —— 没有 arc、渐变和复杂容器，对齐规则简单，最容易在 LVGL 里 1:1 还原。
+  </div>
+</div>
+
+<style>
+/* ============ 方案三：复古终端 Pro / Phosphor ============ */
+.s3{font-family:"Cascadia Mono",Consolas,"Courier New",monospace;padding:8px 9px;display:flex;flex-direction:column}
+.s3.ph-green{background:#040804;color:#3DFF74}
+.s3.ph-amber{background:#080502;color:#FFB000}
+.s3::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.25) 0 1px,transparent 1px 3px);pointer-events:none;z-index:9}
+.s3::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.5) 100%);pointer-events:none;z-index:8}
+.ph-green .dim{color:#1F7A42}
+.ph-amber .dim{color:#8A5B00}
+.ph-green .bright{color:#B9FFD0}
+.ph-amber .bright{color:#FFE0A3}
+.s3 .topline{font-size:9px;display:flex;justify-content:space-between}
+.ph-green .topline{color:#1F7A42}
+.ph-amber .topline{color:#8A5B00}
+.s3-state{font-size:21px;font-weight:800;letter-spacing:1px;margin-top:2px}
+.ph-green .s3-state{color:#3DFF74;text-shadow:0 0 6px rgba(61,255,116,.6)}
+.ph-amber .s3-state{color:#FFB000;text-shadow:0 0 6px rgba(255,176,0,.6)}
+.s3 .cursor{display:inline-block;animation:blk 1s steps(1) infinite}
+@keyframes blk{50%{opacity:0}}
+.s3 .taskline{font-size:11px;margin-top:4px}
+.s3 .infoline{font-size:9px;margin-top:3px}
+.s3 .box{position:relative;border:1px solid;margin-top:10px;padding:7px 8px 8px;font-size:10px}
+.s3 .box.grow{flex:1;display:flex;flex-direction:column;justify-content:space-evenly}
+.ph-green .box{border-color:#1F7A42}
+.ph-amber .box{border-color:#8A5B00}
+.s3 .box-t{position:absolute;top:-6px;left:7px;padding:0 5px;font-size:9px;font-weight:700;letter-spacing:1px}
+.ph-green .box-t{background:#040804;color:#3DFF74}
+.ph-amber .box-t{background:#080502;color:#FFB000}
+.s3 .crow{display:flex;justify-content:space-between;align-items:baseline;line-height:1.7}
+.s3 .bar-ascii{letter-spacing:1px}
+.s3 .pgline{margin-top:auto;padding-top:6px;font-size:9px;text-align:center}
+.s3h2{font-size:10px;font-weight:700;letter-spacing:1px;display:flex;justify-content:space-between}
+.s3 .abox{position:relative;border:1px solid;margin-top:8px;padding:6px 8px;flex:1;display:flex;flex-direction:column;justify-content:space-evenly}
+.s3 .arow3{font-size:10px;display:flex;gap:7px;align-items:baseline;line-height:1.5}
+.s3 .arow3 .tt{flex:none;width:28px}
+.s3 .arow3 .dd{white-space:nowrap;overflow:hidden}
+.s3 .foot3{margin-top:6px;font-size:8px;display:flex;gap:9px;align-items:center}
+.s3 .flag{font-weight:800}
+</style>
+
+<!-- ================= 方案三 ================= -->
+<div class="scheme">
+  <div class="scheme-head">
+    <span class="scheme-num">03</span>
+    <span class="scheme-name">复古终端 Pro / Phosphor</span>
+    <span class="scheme-idea">磷光绿/琥珀双主题 + CRT 扫描线 + 等宽字体与 ASCII 边框，像 btop 一样精致的 TUI</span>
+  </div>
+  <div class="row">
+
+    <div class="slot">
+      <div class="bezel"><div class="scr s3 ph-green">
+        <div class="topline"><span>codex@monitor:~$ status</span><span>tty1 · 80×24</span></div>
+        <div class="s3-state">[WORKING]<span class="cursor">▊</span></div>
+        <div class="taskline bright">&gt; 修复登录页样式回归问题</div>
+        <div class="infoline dim">MODEL gpt-5.1-codex │ CTX ▓▓▓▓░░░░░░ 42%</div>
+        <div class="box">
+          <span class="box-t">WEATHER</span>
+          <div class="crow"><span><span class="bright">上海</span> 多云</span><span class="bright" style="font-size:12px;font-weight:700">24°</span></div>
+        </div>
+        <div class="box grow">
+          <span class="box-t">USAGE</span>
+          <div class="crow"><span>5H <span class="bar-ascii bright">███████░░░</span> 73%</span><span class="dim">RST 18:30</span></div>
+          <div class="crow"><span>7D <span class="bar-ascii bright">████░░░░░░</span> 41%</span><span class="dim">RST 周四 09:12</span></div>
+        </div>
+        <div class="pgline dim">◂ page 1/2 ▸ 30s auto</div>
+      </div></div>
+      <div class="meta"><b>第 1 页 · 正常态（磷光绿 WORKING）</b><br>实机 320×240 · 2x 放大</div>
+    </div>
+
+    <div class="slot">
+      <div class="bezel"><div class="scr s3 ph-amber">
+        <div class="topline"><span>codex@monitor:~$ status</span><span>tty1 · 80×24</span></div>
+        <div class="s3-state">[NEED INPUT]<span class="cursor">▊</span></div>
+        <div class="taskline bright">&gt; 修复登录页样式回归问题</div>
+        <div class="infoline dim">MODEL gpt-5.1-codex │ CTX ▓▓▓▓░░░░░░ 42%</div>
+        <div class="box">
+          <span class="box-t">WEATHER</span>
+          <div class="crow"><span><span class="bright">上海</span> 多云</span><span class="bright" style="font-size:12px;font-weight:700">24°</span></div>
+        </div>
+        <div class="box grow">
+          <span class="box-t">USAGE</span>
+          <div class="crow"><span>5H <span class="bar-ascii bright">███████░░░</span> 73%</span><span class="dim">RST 18:30</span></div>
+          <div class="crow"><span>7D <span class="bar-ascii bright">████░░░░░░</span> 41%</span><span class="dim">RST 周四 09:12</span></div>
+        </div>
+        <div class="pgline dim">!! waiting for user action ▂▂</div>
+      </div></div>
+      <div class="meta"><b>第 1 页 · 警示态（琥珀 NEEDS USER）</b><br>实机 320×240 · 2x 放大</div>
+    </div>
+
+    <div class="slot">
+      <div class="bezel"><div class="scr s3 ph-green">
+        <div class="s3h2"><span>[ACTIVITIES]</span><span class="dim">tail -n 5</span></div>
+        <div class="abox">
+          <span class="box-t">LOG</span>
+          <div class="arow3"><span class="tt dim">12:03</span><span class="dd">执行 Bash 命令 <span class="bright">npm test</span></span></div>
+          <div class="arow3"><span class="tt dim">12:01</span><span class="dd">编辑 <span class="bright">src/main.ts</span></span></div>
+          <div class="arow3"><span class="tt dim">11:58</span><span class="dd">读取 <span class="bright">package.json</span></span></div>
+          <div class="arow3"><span class="tt dim">11:55</span><span class="dd">搜索代码 <span class="bright">grep -r</span></span></div>
+          <div class="arow3"><span class="tt dim">11:52</span><span class="dd">写入 <span class="bright">docs/plan.md</span></span></div>
+        </div>
+        <div class="foot3 dim">
+          <span>MODEL gpt-5.1-codex</span><span>CTX 42%</span><span class="flag" style="color:#FFB000">[!] 需要处理</span><span>其他活动任务 2</span>
+        </div>
+      </div></div>
+      <div class="meta"><b>第 2 页 · 活动详情（磷光绿）</b><br>实机 320×240 · 2x 放大</div>
+    </div>
+
+  </div>
+  <div class="notes">
+    <b>LVGL 落地：</b><span class="tag">等宽 label 层级</span><span class="tag">1px 边框 panel + 标题压边</span><span class="tag">ASCII 方块 bar（文本）</span><span class="tag">扫描线用半透明平铺图层或省略</span><span class="tag">光标闪烁用 timer</span>
+    本质是「文本 + 边框」，无渐变无 arc；扫描线/暗角属于装饰，LVGL 上可用半透明对象叠加近似，去掉也不影响信息。<br>
+    <b>落地工作量：低-中</b> —— 布局最接近现有实现，主要是重排文本层级与边框容器；双色主题只是换调色板常量。
+  </div>
+</div>
+
+</body>
+</html>

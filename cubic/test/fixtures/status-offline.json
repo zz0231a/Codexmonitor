@@ -6,13 +6,13 @@
   "status": "offline",
   "primary_task": {
     "id": "task-71bc",
-    "title": "审查登录模块 PR #128",
+    "title": "review login PR #128",
     "status": "needs_user",
     "lastActiveAt": 1789635000,
     "model": "gpt-5.2-codex"
   },
   "activities": [
-    { "stage": "responding", "summary": "是否合并该 PR？", "at": 1789635001 }
+    { "stage": "responding", "summary": "merge this PR?", "at": 1789635001 }
   ],
   "usage": { "windows": [] },
   "other_active_task_count": 0

@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Token Monitor 第 3 页假图 · 320×240</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0B0D12;color:#C9D1E0;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;padding:48px 56px 80px}
+.page-title{font-size:28px;font-weight:700;color:#E8ECF5}
+.page-sub{color:#8A93A6;margin-top:10px;font-size:14px;line-height:1.7;max-width:920px}
+.scheme{margin-top:56px}
+.scheme-head{display:flex;align-items:baseline;gap:16px;border-bottom:1px solid #1E2533;padding-bottom:12px;flex-wrap:wrap}
+.scheme-num{font-size:12px;color:#5A6376;letter-spacing:3px;font-family:Consolas,monospace}
+.scheme-name{font-size:20px;font-weight:700;color:#E8ECF5}
+.scheme-idea{color:#8A93A6;font-size:13px}
+.row{display:flex;gap:36px;margin-top:28px;flex-wrap:wrap}
+.slot{width:640px;flex:none}
+.bezel{width:640px;height:480px;border-radius:12px;overflow:hidden;outline:1px solid #2A3342;outline-offset:5px;background:#000}
+.scr{width:320px;height:240px;transform:scale(2);transform-origin:top left;position:relative;overflow:hidden;background:#0A0E17;color:#D5DBE5;font-family:Montserrat,Segoe UI,sans-serif}
+.meta{margin-top:16px;font-size:12px;color:#7B8498;line-height:1.65}
+.meta b{color:#D5DBE5;font-size:13px}
+.notes{margin-top:22px;background:#10141D;border:1px solid #1E2533;border-radius:10px;padding:14px 20px;font-size:13px;color:#98A2B8;line-height:1.8;max-width:1320px}
+.notes b{color:#D5DBE5}
+.tag{display:inline-block;background:#1A2130;border-radius:4px;padding:1px 8px;margin:0 6px 4px 0;font-size:12px;color:#9FB0CC}
+
+/* shared cockpit */
+.card{background:#141A28;border:1px solid #222A3A;border-radius:7px}
+.dim{color:#8A93A6}
+.bright{color:#E8ECF5}
+.ok{color:#4ADE80}
+.warn{color:#FACC15}
+.err{color:#F87171}
+.off{color:#6B7484}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.dot.green{background:#4ADE80;box-shadow:0 0 5px rgba(74,222,128,.9)}
+.dot.gray{background:#6B7484}
+
+/* page 1 recreation */
+.p1{padding:0}
+.p1 .status-dot{position:absolute;left:8px;top:11px;width:8px;height:8px;border-radius:4px;background:#4ADE80}
+.p1 .kicker{position:absolute;left:22px;top:9px;font-size:10px;letter-spacing:2px;color:#8A93A6;font-weight:600}
+.p1 .weather{position:absolute;left:234px;top:8px;width:78px;height:58px;text-align:right;padding:5px 8px}
+.p1 .weather .city,.p1 .weather .note{font-size:8px;color:#8A93A6}
+.p1 .weather .temp{font-size:16px;font-weight:700;color:#E8ECF5;line-height:1.2}
+.p1 .state{position:absolute;left:8px;top:26px;font-size:24px;font-weight:800;letter-spacing:.5px;color:#4ADE80;text-shadow:0 0 8px rgba(74,222,128,.4)}
+.p1 .sub{position:absolute;left:8px;top:56px;font-size:10px;color:#8A93A6}
+.p1 .task{position:absolute;left:8px;top:72px;width:304px;height:26px}
+.p1 .ticon{position:absolute;left:16px;top:78px;width:4px;height:14px;border-radius:2px;background:#4ADE80}
+.p1 .title{position:absolute;left:28px;top:78px;font-size:12px;font-weight:600;color:#E8ECF5}
+.p1 .ctx{position:absolute;left:8px;top:104px;width:120px;height:56px}
+.p1 .ring{position:absolute;left:16px;top:112px;width:40px;height:40px;border-radius:50%;background:conic-gradient(#4ADE80 0 80%,#232B3D 80% 100%);display:flex;align-items:center;justify-content:center}
+.p1 .ring .hole{width:28px;height:28px;border-radius:50%;background:#141A28;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#E8ECF5}
+.p1 .ctx-l{position:absolute;left:64px;top:120px;font-size:8px;letter-spacing:2px;color:#8A93A6}
+.p1 .ctx-c{position:absolute;left:64px;top:132px;font-size:8px;color:#8A93A6}
+.p1 .model{position:absolute;left:134px;top:104px;width:178px;height:56px}
+.p1 .ml{position:absolute;left:142px;top:114px;font-size:8px;letter-spacing:2px;color:#8A93A6}
+.p1 .mv{position:absolute;left:142px;top:128px;font-size:12px;font-weight:700;color:#E8ECF5}
+.p1 .usage{position:absolute;left:8px;top:166px;width:304px;height:66px}
+.p1 .bl{position:absolute;left:16px;font-size:10px;font-weight:700;color:#8A93A6}
+.p1 .bar{position:absolute;left:40px;width:148px;height:9px;border-radius:4px;background:#232B3D;overflow:hidden}
+.p1 .bar i{display:block;height:100%;background:linear-gradient(90deg,#22C55E,#4ADE80)}
+.p1 .bp{position:absolute;left:196px;font-size:10px;font-weight:700;color:#E8ECF5}
+.p1 .br{position:absolute;left:240px;font-size:8px;color:#8A93A6}
+
+/* page 2 recreation */
+.p2 .ht{position:absolute;left:8px;top:8px;font-size:14px;font-weight:800;letter-spacing:2px;color:#E8ECF5}
+.p2 .hh{position:absolute;left:268px;top:12px;font-size:8px;color:#8A93A6}
+.p2 .rowc{position:absolute;left:8px;width:304px;height:25px;border-radius:6px}
+.p2 .ic{position:absolute;left:16px;width:14px;height:14px;border-radius:4px;background:#14301F;color:#4ADE80;font-size:8px;font-weight:800;display:flex;align-items:center;justify-content:center}
+.p2 .tx{position:absolute;left:40px;font-size:10px;color:#D5DBE5}
+.p2 .tm{position:absolute;left:252px;width:52px;text-align:right;font-size:8px;color:#8A93A6}
+.p2 .foot{position:absolute;left:8px;top:176px;width:304px;height:28px}
+.p2 .fm{position:absolute;left:16px;top:185px;font-size:10px;color:#E8ECF5}
+.p2 .fc{position:absolute;left:120px;top:186px;font-size:8px;color:#8A93A6}
+
+/* page 3 shared header */
+.p3 .ht{position:absolute;left:8px;top:8px;font-size:14px;font-weight:800;letter-spacing:2px;color:#E8ECF5}
+.p3 .hh{position:absolute;right:8px;top:12px;font-size:8px;color:#8A93A6;letter-spacing:1px}
+.p3 .live{position:absolute;left:118px;top:12px;display:flex;align-items:center;gap:5px;font-size:8px;letter-spacing:1px;color:#8A93A6}
+.p3 .live b{color:#4ADE80;font-weight:700}
+
+/* A: bar list */
+.p3a .limits{position:absolute;left:8px;top:32px;width:304px;height:138px}
+.p3a .r{position:absolute;left:0;width:304px;height:34px}
+.p3a .nl{position:absolute;left:8px;top:10px;width:52px;font-size:10px;font-weight:700;letter-spacing:.5px;color:#8A93A6}
+.p3a .bar{position:absolute;left:62px;top:12px;width:132px;height:9px;border-radius:4px;background:#232B3D;overflow:hidden}
+.p3a .bar i{display:block;height:100%;border-radius:4px}
+.p3a .bar i.g{background:linear-gradient(90deg,#22C55E,#4ADE80);box-shadow:0 0 6px rgba(74,222,128,.45)}
+.p3a .bar i.a{background:linear-gradient(90deg,#D97706,#FACC15);box-shadow:0 0 6px rgba(250,204,21,.45)}
+.p3a .bar i.e{background:linear-gradient(90deg,#DC2626,#F87171)}
+.p3a .bp{position:absolute;left:202px;top:9px;width:34px;font-size:10px;font-weight:700;color:#E8ECF5}
+.p3a .br{position:absolute;left:236px;top:10px;width:60px;font-size:8px;color:#8A93A6;text-align:right}
+.p3a .stats{position:absolute;left:8px;top:176px;width:304px;height:56px}
+.p3a .col{position:absolute;top:8px;width:140px}
+.p3a .col.l{left:12px}
+.p3a .col.r{left:160px}
+.p3a .sl{font-size:8px;letter-spacing:2px;color:#8A93A6;font-weight:600}
+.p3a .sv{margin-top:4px;font-size:16px;font-weight:800;color:#E8ECF5;letter-spacing:.3px}
+.p3a .sc{font-size:10px;color:#8A93A6;margin-top:1px}
+
+/* B: 2x2 tiles */
+.p3b .tile{position:absolute;width:148px;height:64px}
+.p3b .tl{position:absolute;left:10px;top:8px;font-size:8px;letter-spacing:2px;color:#8A93A6;font-weight:600}
+.p3b .tv{position:absolute;left:10px;top:24px;font-size:22px;font-weight:800;letter-spacing:.5px}
+.p3b .tw{position:absolute;left:10px;top:48px;font-size:8px;color:#8A93A6}
+.p3b .stats{position:absolute;left:8px;top:176px;width:304px;height:56px}
+.p3b .col{position:absolute;top:8px;width:140px}
+.p3b .col.l{left:12px}
+.p3b .col.r{left:160px}
+.p3b .sl{font-size:8px;letter-spacing:2px;color:#8A93A6;font-weight:600}
+.p3b .sv{margin-top:4px;font-size:16px;font-weight:800;color:#E8ECF5}
+.p3b .sc{font-size:10px;color:#8A93A6;margin-top:1px}
+
+/* C: denser edge-dock */
+.p3c .limits{position:absolute;left:8px;top:32px;width:304px;height:112px}
+.p3c .r{position:absolute;left:0;width:304px;height:28px}
+.p3c .nl{position:absolute;left:8px;top:8px;width:52px;font-size:10px;font-weight:700;color:#8A93A6}
+.p3c .bar{position:absolute;left:62px;top:10px;width:132px;height:8px;border-radius:4px;background:#232B3D;overflow:hidden}
+.p3c .bar i{display:block;height:100%}
+.p3c .bar i.g{background:linear-gradient(90deg,#22C55E,#4ADE80)}
+.p3c .bp{position:absolute;left:202px;top:7px;width:34px;font-size:10px;font-weight:700;color:#E8ECF5}
+.p3c .br{position:absolute;left:236px;top:8px;width:60px;font-size:8px;color:#8A93A6;text-align:right}
+.p3c .stats{position:absolute;left:8px;top:150px;width:304px;height:82px;display:flex}
+.p3c .cell{flex:1;padding:10px 0 0;text-align:center;border-right:1px solid #222A3A}
+.p3c .cell:last-child{border-right:none}
+.p3c .sl{font-size:8px;letter-spacing:1px;color:#8A93A6;font-weight:600}
+.p3c .sv{margin-top:6px;font-size:14px;font-weight:800;color:#E8ECF5}
+.p3c .sc{margin-top:2px;font-size:8px;color:#8A93A6}
+</style>
+</head>
+<body>
+
+<div class="page-title">Token Monitor · 第 3 页假图</div>
+<div class="page-sub">
+  现有第 1 / 2 页不动，只加一页显示本机 Token Monitor 贴边栏上的信息。屏幕按实机 320×240 绘制、2 倍放大。文案全 ASCII（固件无中文字形）。数字来自本机当前快照：Grok 64%、Codex 5H 90%、Cursor Models 66%、Claude 无窗口；今日 2.9M / $3.13，累计 2.2B / $1212。
+</div>
+
+<div class="scheme">
+  <div class="scheme-head">
+    <span class="scheme-num">00</span>
+    <span class="scheme-name">现有两页（对照，不改）</span>
+    <span class="scheme-idea">第 3 页会插入轮播：1 状态 → 2 活动 → 3 用量</span>
+  </div>
+  <div class="row">
+    <div class="slot">
+      <div class="bezel"><div class="scr p1">
+        <div class="status-dot"></div>
+        <div class="kicker">CODEX</div>
+        <div class="weather card">
+          <div class="city">[zh]</div>
+          <div class="temp">--</div>
+          <div class="note">--</div>
+        </div>
+        <div class="state">WORKING</div>
+        <div class="sub">task running</div>
+        <div class="task card"></div>
+        <div class="ticon"></div>
+        <div class="title">[zh]</div>
+        <div class="ctx card"></div>
+        <div class="ring"><div class="hole">80%</div></div>
+        <div class="ctx-l">CTX</div>
+        <div class="ctx-c">USED</div>
+        <div class="model card"></div>
+        <div class="ml">MODEL</div>
+        <div class="mv">gpt-5.6-sol</div>
+        <div class="usage card"></div>
+        <div class="bl" style="top:176px">5H</div>
+        <div class="bar" style="top:177px"><i style="width:90%"></i></div>
+        <div class="bp" style="top:176px">90%</div>
+        <div class="br" style="top:177px">RST 14:21</div>
+        <div class="bl" style="top:200px">7D</div>
+        <div class="bar" style="top:201px"><i style="width:79%"></i></div>
+        <div class="bp" style="top:200px">79%</div>
+        <div class="br" style="top:201px">RST 15:48</div>
+      </div></div>
+      <div class="meta"><b>第 1 页 · Codex 状态（保持）</b><br>任务、CTX、MODEL、Codex 5H/7D 仍在这里。</div>
+    </div>
+    <div class="slot">
+      <div class="bezel"><div class="scr p2">
+        <div class="ht">ACTIVITIES</div>
+        <div class="hh">LAST 5</div>
+        <div class="rowc card" style="top:28px"></div>
+        <div class="ic" style="top:33px">+</div>
+        <div class="tx" style="top:35px">task done</div>
+        <div class="tm" style="top:36px">09:30</div>
+        <div class="rowc card" style="top:57px"></div>
+        <div class="ic" style="top:62px">$</div>
+        <div class="tx" style="top:64px">run tool</div>
+        <div class="tm" style="top:65px">09:30</div>
+        <div class="rowc card" style="top:86px"></div>
+        <div class="ic" style="top:91px">$</div>
+        <div class="tx" style="top:93px">run tool</div>
+        <div class="tm" style="top:94px">09:30</div>
+        <div class="rowc card" style="top:115px"></div>
+        <div class="ic" style="top:120px">$</div>
+        <div class="tx" style="top:122px">run tool</div>
+        <div class="tm" style="top:123px">09:29</div>
+        <div class="rowc card" style="top:144px"></div>
+        <div class="ic" style="top:149px">$</div>
+        <div class="tx" style="top:151px">run tool</div>
+        <div class="tm" style="top:152px">09:29</div>
+        <div class="foot card"></div>
+        <div class="fm">gpt-5.6-sol</div>
+        <div class="fc">CTX 80%</div>
+      </div></div>
+      <div class="meta"><b>第 2 页 · 活动摘要（保持）</b><br>左右键手动切页，30 秒自动轮播。</div>
+    </div>
+  </div>
+</div>
+
+<div class="scheme">
+  <div class="scheme-head">
+    <span class="scheme-num">A</span>
+    <span class="scheme-name">进度条列表（推荐）</span>
+    <span class="scheme-idea">和现有 5H/7D 同一套控件：4 家额度条 + 底部今日/累计</span>
+  </div>
+  <div class="row">
+    <div class="slot">
+      <div class="bezel"><div class="scr p3 p3a" id="shot-a">
+        <div class="ht">TOKENS</div>
+        <div class="live"><span class="dot green"></span><b>LIVE</b></div>
+        <div class="hh">3 / 3</div>
+        <div class="limits card">
+          <div class="r" style="top:0">
+            <div class="nl">GROK</div>
+            <div class="bar"><i class="g" style="width:64%"></i></div>
+            <div class="bp">64%</div>
+            <div class="br">WKLY</div>
+          </div>
+          <div class="r" style="top:34px">
+            <div class="nl">CODEX</div>
+            <div class="bar"><i class="g" style="width:90%"></i></div>
+            <div class="bp">90%</div>
+            <div class="br">5H</div>
+          </div>
+          <div class="r" style="top:68px">
+            <div class="nl">CURSOR</div>
+            <div class="bar"><i class="g" style="width:66%"></i></div>
+            <div class="bp">66%</div>
+            <div class="br">MODELS</div>
+          </div>
+          <div class="r" style="top:102px">
+            <div class="nl">CLAUDE</div>
+            <div class="bar"></div>
+            <div class="bp off">--</div>
+            <div class="br">--</div>
+          </div>
+        </div>
+        <div class="stats card">
+          <div class="col l">
+            <div class="sl">TODAY</div>
+            <div class="sv">2.9M</div>
+            <div class="sc">$3.13</div>
+          </div>
+          <div class="col r">
+            <div class="sl">ALL TIME</div>
+            <div class="sv">2.2B</div>
+            <div class="sc">$1212</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="meta"><b>A1 · 正常态</b><br>每家只显示一条主额度（贴边栏同款）。Claude 当前无窗口，显示 --。右侧短标签标明窗口：WKLY / 5H / MODELS。</div>
+    </div>
+    <div class="slot">
+      <div class="bezel"><div class="scr p3 p3a" id="shot-a-warn">
+        <div class="ht">TOKENS</div>
+        <div class="live"><span class="dot green"></span><b>LIVE</b></div>
+        <div class="hh">3 / 3</div>
+        <div class="limits card">
+          <div class="r" style="top:0">
+            <div class="nl">GROK</div>
+            <div class="bar"><i class="a" style="width:18%"></i></div>
+            <div class="bp warn">18%</div>
+            <div class="br">WKLY</div>
+          </div>
+          <div class="r" style="top:34px">
+            <div class="nl">CODEX</div>
+            <div class="bar"><i class="e" style="width:4%"></i></div>
+            <div class="bp err">4%</div>
+            <div class="br">5H</div>
+          </div>
+          <div class="r" style="top:68px">
+            <div class="nl">CURSOR</div>
+            <div class="bar"><i class="g" style="width:66%"></i></div>
+            <div class="bp">66%</div>
+            <div class="br">MODELS</div>
+          </div>
+          <div class="r" style="top:102px">
+            <div class="nl">CLAUDE</div>
+            <div class="bar"></div>
+            <div class="bp off">--</div>
+            <div class="br">--</div>
+          </div>
+        </div>
+        <div class="stats card">
+          <div class="col l">
+            <div class="sl">TODAY</div>
+            <div class="sv">2.9M</div>
+            <div class="sc">$3.13</div>
+          </div>
+          <div class="col r">
+            <div class="sl">ALL TIME</div>
+            <div class="sv">2.2B</div>
+            <div class="sc">$1212</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="meta"><b>A2 · 额度告警（示意）</b><br>沿用第 1 页规则：剩余 &lt;20% 琥珀，=0% 或极低红色。不是本机当前数据。</div>
+    </div>
+  </div>
+  <div class="notes">
+    <b>推荐原因：</b>和第 1 页 5H/7D 同一套 <span class="tag">label + lv_bar + %</span>，LVGL 最容易 1:1 落地。一眼能对上 Token Monitor 贴边栏的四家额度，底部补上贴边栏的 TODAY / ALL TIME。
+  </div>
+</div>
+
+<div class="scheme">
+  <div class="scheme-head">
+    <span class="scheme-num">B</span>
+    <span class="scheme-name">四宫格大数字</span>
+    <span class="scheme-idea">更接近 Token Monitor 贴边栏「每家一个大剩余值」的扫一眼方式</span>
+  </div>
+  <div class="row">
+    <div class="slot">
+      <div class="bezel"><div class="scr p3 p3b" id="shot-b">
+        <div class="ht">TOKENS</div>
+        <div class="live"><span class="dot green"></span><b>LIVE</b></div>
+        <div class="hh">3 / 3</div>
+        <div class="tile card" style="left:8px;top:32px">
+          <div class="tl">GROK</div>
+          <div class="tv ok">64%</div>
+          <div class="tw">WEEKLY</div>
+        </div>
+        <div class="tile card" style="left:164px;top:32px">
+          <div class="tl">CODEX</div>
+          <div class="tv ok">90%</div>
+          <div class="tw">5H WINDOW</div>
+        </div>
+        <div class="tile card" style="left:8px;top:102px">
+          <div class="tl">CURSOR</div>
+          <div class="tv ok">66%</div>
+          <div class="tw">MODELS</div>
+        </div>
+        <div class="tile card" style="left:164px;top:102px">
+          <div class="tl">CLAUDE</div>
+          <div class="tv off">--</div>
+          <div class="tw">NO DATA</div>
+        </div>
+        <div class="stats card">
+          <div class="col l">
+            <div class="sl">TODAY</div>
+            <div class="sv">2.9M</div>
+            <div class="sc">$3.13</div>
+          </div>
+          <div class="col r">
+            <div class="sl">ALL TIME</div>
+            <div class="sv">2.2B</div>
+            <div class="sc">$1212</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="meta"><b>B1 · 正常态</b><br>剩余百分比做成大字，距离 1 米也能读。窗口名缩到副标题。</div>
+    </div>
+    <div class="slot">
+      <div class="bezel"><div class="scr p3 p3b" id="shot-b-off">
+        <div class="ht">TOKENS</div>
+        <div class="live"><span class="dot gray"></span><span class="off">STALE</span></div>
+        <div class="hh">3 / 3</div>
+        <div class="tile card" style="left:8px;top:32px">
+          <div class="tl">GROK</div>
+          <div class="tv off">64%</div>
+          <div class="tw">WEEKLY</div>
+        </div>
+        <div class="tile card" style="left:164px;top:32px">
+          <div class="tl">CODEX</div>
+          <div class="tv off">90%</div>
+          <div class="tw">5H WINDOW</div>
+        </div>
+        <div class="tile card" style="left:8px;top:102px">
+          <div class="tl">CURSOR</div>
+          <div class="tv off">66%</div>
+          <div class="tw">MODELS</div>
+        </div>
+        <div class="tile card" style="left:164px;top:102px">
+          <div class="tl">CLAUDE</div>
+          <div class="tv off">--</div>
+          <div class="tw">NO DATA</div>
+        </div>
+        <div class="stats card">
+          <div class="col l">
+            <div class="sl">TODAY</div>
+            <div class="sv off">2.9M</div>
+            <div class="sc">$3.13</div>
+          </div>
+          <div class="col r">
+            <div class="sl">ALL TIME</div>
+            <div class="sv off">2.2B</div>
+            <div class="sc">$1212</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="meta"><b>B2 · Token Monitor 未开 / 数据过期</b><br>整页降暗，LIVE 改 STALE。第 1 / 2 页的 Codex 状态不受影响。</div>
+    </div>
+  </div>
+  <div class="notes">
+    <b>取舍：</b>大数字更好扫，但看不到「还剩多少条」的条形直觉，也比 A 多 4 张卡片。LVGL 仍然常规，只是比复用现有 bar 稍多一点排版。
+  </div>
+</div>
+
+<div class="scheme">
+  <div class="scheme-head">
+    <span class="scheme-num">C</span>
+    <span class="scheme-name">额度条 + 四段统计</span>
+    <span class="scheme-idea">把贴边栏的 TODAY / 7D / 30D / ALL 也放上来，额度条略压缩</span>
+  </div>
+  <div class="row">
+    <div class="slot">
+      <div class="bezel"><div class="scr p3 p3c" id="shot-c">
+        <div class="ht">TOKENS</div>
+        <div class="live"><span class="dot green"></span><b>LIVE</b></div>
+        <div class="hh">3 / 3</div>
+        <div class="limits card">
+          <div class="r" style="top:0">
+            <div class="nl">GROK</div>
+            <div class="bar"><i class="g" style="width:64%"></i></div>
+            <div class="bp">64%</div>
+            <div class="br">WKLY</div>
+          </div>
+          <div class="r" style="top:28px">
+            <div class="nl">CODEX</div>
+            <div class="bar"><i class="g" style="width:90%"></i></div>
+            <div class="bp">90%</div>
+            <div class="br">5H</div>
+          </div>
+          <div class="r" style="top:56px">
+            <div class="nl">CURSOR</div>
+            <div class="bar"><i class="g" style="width:66%"></i></div>
+            <div class="bp">66%</div>
+            <div class="br">MODELS</div>
+          </div>
+          <div class="r" style="top:84px">
+            <div class="nl">CLAUDE</div>
+            <div class="bar"></div>
+            <div class="bp off">--</div>
+            <div class="br">--</div>
+          </div>
+        </div>
+        <div class="stats card">
+          <div class="cell">
+            <div class="sl">TODAY</div>
+            <div class="sv">2.9M</div>
+            <div class="sc">$3.13</div>
+          </div>
+          <div class="cell">
+            <div class="sl">7D</div>
+            <div class="sv">41M</div>
+            <div class="sc">$28</div>
+          </div>
+          <div class="cell">
+            <div class="sl">30D</div>
+            <div class="sv">180M</div>
+            <div class="sc">$140</div>
+          </div>
+          <div class="cell">
+            <div class="sl">ALL</div>
+            <div class="sv">2.2B</div>
+            <div class="sc">$1212</div>
+          </div>
+        </div>
+      </div></div>
+      <div class="meta"><b>C1 · 信息最满</b><br>7D / 30D 的数字是示意（要从历史汇总，第一版实现成本更高）。额度条行高被压到 28px，10px 字体刚刚够。</div>
+    </div>
+  </div>
+  <div class="notes">
+    <b>不建议第一版就做 C：</b>近 7 天 / 30 天不在 Token Monitor 的即时快照里，要额外读历史。若你更在意「今天花了多少」而不是「这周累计」，选 A 或 B 即可。
+  </div>
+</div>
+
+</body>
+</html>

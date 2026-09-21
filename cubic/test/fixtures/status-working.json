@@ -6,18 +6,18 @@
   "status": "working",
   "primary_task": {
     "id": "task-9f3a",
-    "title": "重构协议适配器",
+    "title": "refactor protocol adapter",
     "status": "working",
     "lastActiveAt": 1789635900,
     "model": "gpt-5.2-codex",
     "contextPercent": 42
   },
   "activities": [
-    { "stage": "analysis", "summary": "分析输入", "at": 1789635970 },
-    { "stage": "reading", "summary": "读取 [路径]", "at": 1789635976 },
-    { "stage": "tool", "summary": "执行 npm run verify -- --[密钥]", "at": 1789635982 },
-    { "stage": "responding", "summary": "生成回复", "at": 1789635990 },
-    { "stage": "tool", "summary": "打开 main.ts 继续修改", "at": 1789635996 }
+    { "stage": "analysis", "summary": "analyze input", "at": 1789635970 },
+    { "stage": "reading", "summary": "read [path]", "at": 1789635976 },
+    { "stage": "tool", "summary": "run npm verify -- --[secret]", "at": 1789635982 },
+    { "stage": "responding", "summary": "respond", "at": 1789635990 },
+    { "stage": "tool", "summary": "open main.ts", "at": 1789635996 }
   ],
   "usage": {
     "windows": [
@@ -25,5 +25,20 @@
       { "remainingPercent": 38, "windowDurationMins": 10080, "resetsAt": 1789636000 }
     ]
   },
-  "other_active_task_count": 1
+  "other_active_task_count": 1,
+  "token_monitor": {
+    "available": true,
+    "stale": false,
+    "updatedAt": 1789636000,
+    "tools": [
+      { "id": "codex", "rank": 1, "remainingPercent": 82, "window": "5H" },
+      { "id": "cursor", "rank": 2, "remainingPercent": 85, "window": "7D" },
+      { "id": "workbuddy", "rank": 3, "remainingPercent": null, "window": "--" },
+      { "id": "kimi", "rank": 4, "remainingPercent": null, "window": "--" }
+    ],
+    "rate": { "tokensPerMin": 2400, "idle": false },
+    "today": { "tokens": 12889261, "costUsd": 13.7 },
+    "last7": { "tokens": 170874580, "costUsd": 156.61 },
+    "allTime": { "tokens": 2235547008, "costUsd": 1219 }
+  }
 }

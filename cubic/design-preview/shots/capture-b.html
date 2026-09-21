@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:320px;height:240px;overflow:hidden;background:#0A0E17}
+body{font-family:"Segoe UI",Montserrat,sans-serif;color:#D5DBE5}
+.card{background:#141A28;border:1px solid #222A3A;border-radius:7px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:#4ADE80;box-shadow:0 0 5px rgba(74,222,128,.9)}
+.ht{position:absolute;left:8px;top:8px;font-size:14px;font-weight:800;letter-spacing:2px;color:#E8ECF5}
+.live{position:absolute;left:118px;top:12px;display:flex;align-items:center;gap:5px;font-size:8px;letter-spacing:1px;color:#8A93A6}
+.live b{color:#4ADE80;font-weight:700}
+.hh{position:absolute;right:8px;top:12px;font-size:8px;color:#8A93A6;letter-spacing:1px}
+.tile{position:absolute;width:148px;height:64px}
+.tl{position:absolute;left:10px;top:8px;font-size:8px;letter-spacing:2px;color:#8A93A6;font-weight:600}
+.tv{position:absolute;left:10px;top:24px;font-size:22px;font-weight:800}
+.tw{position:absolute;left:10px;top:48px;font-size:8px;color:#8A93A6}
+.ok{color:#4ADE80}.off{color:#6B7484}
+.stats{position:absolute;left:8px;top:176px;width:304px;height:56px}
+.col{position:absolute;top:8px;width:140px}
+.col.l{left:12px}.col.r{left:160px}
+.sl{font-size:8px;letter-spacing:2px;color:#8A93A6;font-weight:600}
+.sv{margin-top:4px;font-size:16px;font-weight:800;color:#E8ECF5}
+.sc{font-size:10px;color:#8A93A6;margin-top:1px}
+</style></head>
+<body>
+<div class="ht">TOKENS</div>
+<div class="live"><span class="dot"></span><b>LIVE</b></div>
+<div class="hh">3 / 3</div>
+<div class="tile card" style="left:8px;top:32px"><div class="tl">GROK</div><div class="tv ok">64%</div><div class="tw">WEEKLY</div></div>
+<div class="tile card" style="left:164px;top:32px"><div class="tl">CODEX</div><div class="tv ok">90%</div><div class="tw">5H WINDOW</div></div>
+<div class="tile card" style="left:8px;top:102px"><div class="tl">CURSOR</div><div class="tv ok">66%</div><div class="tw">MODELS</div></div>
+<div class="tile card" style="left:164px;top:102px"><div class="tl">CLAUDE</div><div class="tv off">--</div><div class="tw">NO DATA</div></div>
+<div class="stats card">
+  <div class="col l"><div class="sl">TODAY</div><div class="sv">2.9M</div><div class="sc">$3.13</div></div>
+  <div class="col r"><div class="sl">ALL TIME</div><div class="sv">2.2B</div><div class="sc">$1212</div></div>
+</div>
+</body></html>

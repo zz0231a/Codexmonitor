@@ -2,12 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-test("layout contract defines two pages and 30-second rotation", async () => {
+test("layout contract defines a single page without rotation", async () => {
   const lua = await readFile("package/main.lua", "utf8");
-  assert.match(lua, /PAGE_COUNT\s*=\s*2/);
-  assert.match(lua, /30000/);
-  assert.match(lua, /key\.LEFT/);
-  assert.match(lua, /key\.RIGHT/);
+  assert.match(lua, /PAGE_COUNT\s*=\s*1/);
+  assert.match(lua, /TOOL_SLOTS\s*=\s*8/);
   assert.match(lua, /key\.HOME/);
 });
 
@@ -16,20 +14,30 @@ test("layout exposes the documented renderer entry points", async () => {
   assert.match(lua, /function\s+CODEX_MONITOR_APP\.render_page\b/);
   assert.match(lua, /function\s+CODEX_MONITOR_APP\.render_overview\b/);
   assert.match(lua, /function\s+CODEX_MONITOR_APP\.render_details\b/);
+  assert.match(lua, /function\s+CODEX_MONITOR_APP\.render_tokens\b/);
   assert.match(lua, /function\s+CODEX_MONITOR_APP\.switch_page\b/);
 });
 
-test("overview page shows 5H and 7D usage bars and degrades to dashes", async () => {
+test("overview page shows eight token rings and degrades to dashes", async () => {
   const lua = await readFile("package/main.lua", "utf8");
-  assert.match(lua, /"5H"/);
-  assert.match(lua, /"7D"/);
+  assert.match(lua, /TOOL_SLOTS\s*=\s*8/);
+  assert.match(lua, /tm_slots/);
   assert.match(lua, /"--"/);
 });
 
-test("usage bars warn below 20 percent and error at zero", async () => {
+test("usage colors follow four remaining-percent tiers", async () => {
   const lua = await readFile("package/main.lua", "utf8");
-  assert.match(lua, /remaining\s*<\s*20/);
-  assert.match(lua, /remaining\s*==\s*0/);
+  assert.match(lua, /COLOR_INFO\s*=\s*0x60A5FA/);
+  assert.match(lua, /remaining\s*>=\s*80\s+then\s+return\s+COLOR_OK/);
+  assert.match(lua, /remaining\s*>=\s*50\s+then\s+return\s+COLOR_INFO/);
+  assert.match(lua, /remaining\s*>=\s*20\s+then\s+return\s+COLOR_WARN/);
+  assert.match(lua, /return\s+COLOR_ERR/);
+});
+
+test("tool icons fill the 24px ring interior via 307 zoom from a 20px source", async () => {
+  const lua = await readFile("package/main.lua", "utf8");
+  assert.match(lua, /make_img\(p1, x \+ 25, y \+ 5, 24, 24\)/);
+  assert.match(lua, /lv_img_set_zoom\(slot\.img, 307\)/);
 });
 
 test("manual switch restarts the rotation timer and HOME exits the app", async () => {
@@ -44,4 +52,22 @@ test("manual switch restarts the rotation timer and HOME exits the app", async (
 test("weather panel follows the system settings placeholder", async () => {
   const lua = await readFile("package/main.lua", "utf8");
   assert.match(lua, /weather/);
+});
+
+test("weather uses firmware cubicserver now API and settings location id", async () => {
+  const lua = await readFile("package/main.lua", "utf8");
+  assert.match(lua, /http\.cubicserver/);
+  assert.match(lua, /\/v1\/weather\/now/);
+  assert.match(lua, /weather_location_id/);
+  assert.match(lua, /lang=en/);
+});
+
+test("device-facing status labels stay ASCII because firmware fonts have no CJK glyphs", async () => {
+  const lua = await readFile("package/main.lua", "utf8");
+  const labels = lua.match(/STATUS_LABEL\s*=\s*\{[\s\S]*?\}/)?.[0] ?? "";
+  const subs = lua.match(/STATUS_SUB\s*=\s*\{[\s\S]*?\}/)?.[0] ?? "";
+  assert.match(labels, /WORKING/);
+  assert.equal(/[\u4e00-\u9fff]/.test(labels), false);
+  assert.equal(/[\u4e00-\u9fff]/.test(subs), false);
+  assert.match(lua, /function\s+ascii_only\b/);
 });

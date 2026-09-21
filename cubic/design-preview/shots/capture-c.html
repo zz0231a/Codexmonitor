@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:320px;height:240px;overflow:hidden;background:#0A0E17}
+body{font-family:"Segoe UI",Montserrat,sans-serif;color:#D5DBE5}
+.card{background:#141A28;border:1px solid #222A3A;border-radius:7px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:#4ADE80;box-shadow:0 0 5px rgba(74,222,128,.9)}
+.ht{position:absolute;left:8px;top:8px;font-size:14px;font-weight:800;letter-spacing:2px;color:#E8ECF5}
+.live{position:absolute;left:118px;top:12px;display:flex;align-items:center;gap:5px;font-size:8px;letter-spacing:1px;color:#8A93A6}
+.live b{color:#4ADE80;font-weight:700}
+.hh{position:absolute;right:8px;top:12px;font-size:8px;color:#8A93A6;letter-spacing:1px}
+.limits{position:absolute;left:8px;top:32px;width:304px;height:112px}
+.r{position:absolute;left:0;width:304px;height:28px}
+.nl{position:absolute;left:8px;top:8px;width:52px;font-size:10px;font-weight:700;color:#8A93A6}
+.bar{position:absolute;left:62px;top:10px;width:132px;height:8px;border-radius:4px;background:#232B3D;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#22C55E,#4ADE80)}
+.bp{position:absolute;left:202px;top:7px;width:34px;font-size:10px;font-weight:700;color:#E8ECF5}
+.br{position:absolute;left:236px;top:8px;width:60px;font-size:8px;color:#8A93A6;text-align:right}
+.off{color:#6B7484}
+.stats{position:absolute;left:8px;top:150px;width:304px;height:82px;display:flex}
+.cell{flex:1;padding:10px 0 0;text-align:center;border-right:1px solid #222A3A}
+.cell:last-child{border-right:none}
+.sl{font-size:8px;letter-spacing:1px;color:#8A93A6;font-weight:600}
+.sv{margin-top:6px;font-size:14px;font-weight:800;color:#E8ECF5}
+.sc{margin-top:2px;font-size:8px;color:#8A93A6}
+</style></head>
+<body>
+<div class="ht">TOKENS</div>
+<div class="live"><span class="dot"></span><b>LIVE</b></div>
+<div class="hh">3 / 3</div>
+<div class="limits card">
+  <div class="r" style="top:0"><div class="nl">GROK</div><div class="bar"><i style="width:64%"></i></div><div class="bp">64%</div><div class="br">WKLY</div></div>
+  <div class="r" style="top:28px"><div class="nl">CODEX</div><div class="bar"><i style="width:90%"></i></div><div class="bp">90%</div><div class="br">5H</div></div>
+  <div class="r" style="top:56px"><div class="nl">CURSOR</div><div class="bar"><i style="width:66%"></i></div><div class="bp">66%</div><div class="br">MODELS</div></div>
+  <div class="r" style="top:84px"><div class="nl">CLAUDE</div><div class="bar"></div><div class="bp off">--</div><div class="br">--</div></div>
+</div>
+<div class="stats card">
+  <div class="cell"><div class="sl">TODAY</div><div class="sv">2.9M</div><div class="sc">$3.13</div></div>
+  <div class="cell"><div class="sl">7D</div><div class="sv">41M</div><div class="sc">$28</div></div>
+  <div class="cell"><div class="sl">30D</div><div class="sv">180M</div><div class="sc">$140</div></div>
+  <div class="cell"><div class="sl">ALL</div><div class="sv">2.2B</div><div class="sc">$1212</div></div>
+</div>
+</body></html>
