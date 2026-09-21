@@ -321,6 +321,7 @@ local TOOL_LABEL = {
   amp = "AMP",
   droid = "DROID",
   kimi = "KIMI",
+  deepseek = "DSEEK",
   qwen = "QWEN",
   grok = "GROK",
   copilot = "COPLT",
@@ -875,13 +876,14 @@ local function build_ui()
     set_font(slot.letter, FONT_12)
     set_width(slot.letter, 30)
     set_align(slot.letter, TEXT_ALIGN_CENTER)
-    -- 图标铺满圆环内径（30 - 弧宽 3x2 = 24px），圆心 (x+37, y+17)，左上角 (x+25, y+5)
-    slot.img = make_img(p1, x + 25, y + 5, 24, 24)
-    -- 20px 源图放大到 24px：LVGL zoom 256=1:1，24/20*256=307
+    -- 图标缩小 20% 防遮环：显示 19.2px（24*0.8），LVGL auto_size 锚左上角，
+    -- 左上角取 (x+27, y+7) 使视觉圆心保持 (x+37, y+17)
+    slot.img = make_img(p1, x + 27, y + 7, 19, 19)
+    -- 20px 源图缩到 19.2px：LVGL zoom 256=1:1，307*0.8=246
     if slot.img ~= nil then
       pcall(function()
-        if lv_img_set_zoom then lv_img_set_zoom(slot.img, 307)
-        elseif lv and lv.img_set_zoom then lv.img_set_zoom(slot.img, 307) end
+        if lv_img_set_zoom then lv_img_set_zoom(slot.img, 246)
+        elseif lv and lv.img_set_zoom then lv.img_set_zoom(slot.img, 246) end
       end)
     end
     slot.pct = make_label(p1, x, y + 32, "--")
@@ -1115,6 +1117,7 @@ function CODEX_MONITOR_APP.render_tokens()
       local has_icon = type(tool.id) == "string" and (
         tool.id == "codex" or tool.id == "cursor" or tool.id == "workbuddy"
         or tool.id == "kimi" or tool.id == "claude" or tool.id == "grok"
+        or tool.id == "deepseek"
       )
       if slot.img ~= nil and has_icon then
         shown_img = set_img_src(slot.img, APP_DIR .. "assets/tm_" .. tool.id .. ".png")
