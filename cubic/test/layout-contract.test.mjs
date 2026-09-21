@@ -34,10 +34,12 @@ test("usage colors follow four remaining-percent tiers", async () => {
   assert.match(lua, /return\s+COLOR_ERR/);
 });
 
-test("tool icons shrink 20 percent inside the ring via 246 zoom from a 20px source", async () => {
+test("tool icons shrink to 17px with circular corner clipping to avoid covering the ring", async () => {
   const lua = await readFile("package/main.lua", "utf8");
-  assert.match(lua, /make_img\(p1, x \+ 27, y \+ 7, 19, 19\)/);
-  assert.match(lua, /lv_img_set_zoom\(slot\.img, 246\)/);
+  assert.match(lua, /make_img\(p1, x \+ 28, y \+ 8, 17, 17\)/);
+  assert.match(lua, /lv_img_set_zoom\(slot\.img, 218\)/);
+  assert.match(lua, /lv_obj_set_style_clip_corner\(slot\.img, true/);
+  assert.match(lua, /LV_RADIUS_CIRCLE/);
 });
 
 test("manual switch restarts the rotation timer and HOME exits the app", async () => {

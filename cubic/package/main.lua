@@ -322,6 +322,7 @@ local TOOL_LABEL = {
   droid = "DROID",
   kimi = "KIMI",
   deepseek = "DSEEK",
+  dsh = "DSEEK", -- real DeepSeek id in hub data
   qwen = "QWEN",
   grok = "GROK",
   copilot = "COPLT",
@@ -876,14 +877,22 @@ local function build_ui()
     set_font(slot.letter, FONT_12)
     set_width(slot.letter, 30)
     set_align(slot.letter, TEXT_ALIGN_CENTER)
-    -- 图标缩小 20% 防遮环：显示 19.2px（24*0.8），LVGL auto_size 锚左上角，
-    -- 左上角取 (x+27, y+7) 使视觉圆心保持 (x+37, y+17)
-    slot.img = make_img(p1, x + 27, y + 7, 19, 19)
-    -- 20px 源图缩到 19.2px：LVGL zoom 256=1:1，307*0.8=246
+    -- 图标再收至 17px 并做圆形裁切：19px 方形四角半径约 13.4px 超过圆环内半径 12px 会压弧。
+    -- LVGL auto_size 锚左上角，左上角取 (x+28, y+8) 使视觉圆心保持 (x+37, y+17)（偏差 <1px）
+    slot.img = make_img(p1, x + 28, y + 8, 17, 17)
+    -- 20px 源图缩到 17px：LVGL zoom 256=1:1，17/20*256=218
     if slot.img ~= nil then
       pcall(function()
-        if lv_img_set_zoom then lv_img_set_zoom(slot.img, 246)
-        elseif lv and lv.img_set_zoom then lv.img_set_zoom(slot.img, 246) end
+        if lv_img_set_zoom then lv_img_set_zoom(slot.img, 218)
+        elseif lv and lv.img_set_zoom then lv.img_set_zoom(slot.img, 218) end
+      end)
+      -- 圆形裁切四角（固件缺 API 时 17px 方形四角半径 12.02 也已在弧内）
+      pcall(function()
+        local circle = rawget(_G, "LV_RADIUS_CIRCLE") or 0x7FFF
+        if lv_obj_set_style_radius then lv_obj_set_style_radius(slot.img, circle, MAIN_STYLE)
+        elseif lv and lv.obj_set_style_radius then lv.obj_set_style_radius(slot.img, circle, 0) end
+        if lv_obj_set_style_clip_corner then lv_obj_set_style_clip_corner(slot.img, true, MAIN_STYLE)
+        elseif lv and lv.obj_set_style_clip_corner then lv.obj_set_style_clip_corner(slot.img, true, 0) end
       end)
     end
     slot.pct = make_label(p1, x, y + 32, "--")
@@ -1117,7 +1126,7 @@ function CODEX_MONITOR_APP.render_tokens()
       local has_icon = type(tool.id) == "string" and (
         tool.id == "codex" or tool.id == "cursor" or tool.id == "workbuddy"
         or tool.id == "kimi" or tool.id == "claude" or tool.id == "grok"
-        or tool.id == "deepseek"
+        or tool.id == "dsh" -- DeepSeek 在 hub 数据里的真实 id 是 dsh
       )
       if slot.img ~= nil and has_icon then
         shown_img = set_img_src(slot.img, APP_DIR .. "assets/tm_" .. tool.id .. ".png")

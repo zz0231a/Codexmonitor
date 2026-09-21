@@ -40,7 +40,7 @@ for x, y in [(4, 7), (5, 7), (2, 8), (6, 8), (3, 9), (7, 9), (8, 9)]:
     px[x, y] = BLUE_HI
 # 眼睛（亮色小点，头部左侧）
 px[4, 11] = EYE
-im.save("cubic/package/assets/tm_deepseek.png")
+im.save("cubic/package/assets/tm_dsh.png")
 # 放大预览图，便于人工检查
-im.resize((200, 200), Image.NEAREST).save("cubic/scripts/tm_deepseek_preview.png")
+im.resize((200, 200), Image.NEAREST).save("cubic/scripts/tm_dsh_preview.png")
 print("saved", im.size, im.mode)

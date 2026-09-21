@@ -28,7 +28,8 @@ test("token page formats compact totals and keeps ASCII tool labels", async () =
   assert.match(lua, /CODEX/);
   assert.match(lua, /WBUDDY/);
   assert.match(lua, /deepseek\s*=\s*"DSEEK"/);
-  assert.match(lua, /tool\.id\s*==\s*"deepseek"/);
+  assert.match(lua, /dsh\s*=\s*"DSEEK"/);
+  assert.match(lua, /tool\.id\s*==\s*"dsh"/);
   assert.equal(/[\u4e00-\u9fff]/.test(lua.match(/TOOL_LABEL\s*=\s*\{[\s\S]*?\}/)?.[0] ?? "汉"), false);
 });
 
