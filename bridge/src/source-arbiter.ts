@@ -55,6 +55,7 @@ export interface SourceArbiter {
 
 interface SessionState {
   lastAcceptedAt: number;
+  lastSeenAt: number; // 桥接本机最后一次收到该会话事件的墙钟时间；启动回放旧 JSONL 时不会被误判过期
   lastHookAt: number;
   status: BridgeStatus;
   project: string;
@@ -84,9 +85,11 @@ export function createSourceArbiter(store: StateStore, options: SourceArbiterOpt
 
   function project(): void {
     const clock = now();
-    // 驱逐长时间无活动的会话，避免 sessions 表与快照体积无界增长
+    // 驱逐长时间无活动的会话，避免 sessions 表与快照体积无界增长。
+    // 按桥接实际看到的墙钟时间判定，不按事件时间：启动时回放旧 JSONL
+    // 的会话事件时间很旧，但它们是当前快照的全部来源，不能立即清掉。
     for (const [id, session] of sessions) {
-      if (clock - session.at > SESSION_TTL_MS && isTerminal(session.status)) {
+      if (clock - session.lastSeenAt > SESSION_TTL_MS && isTerminal(session.status)) {
         sessions.delete(id);
       }
     }
@@ -139,6 +142,7 @@ export function createSourceArbiter(store: StateStore, options: SourceArbiterOpt
 
       const next: SessionState = {
         lastAcceptedAt: event.at,
+        lastSeenAt: clock,
         lastHookAt: event.source === "hook" ? clock : (current?.lastHookAt ?? 0),
         status: event.event === "event_msg:token_count" && current ? current.status : event.status,
         project: event.project || current?.project || "",
