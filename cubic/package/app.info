@@ -10,5 +10,5 @@ entry = main.lua
 icon = main.png
 description = Privacy-safe Codex status and usage monitor
 description_zh = 在 Cubic 上显示经过隐私过滤的 Codex 状态、活动与用量
-version = 0.5.0
+version = 0.6.0
 author = llzz7

@@ -34,9 +34,9 @@ export function parseProtocolTimestamp(raw: unknown): number {
 }
 
 /**
- * 连接本机共享 app-server 并产出结构化事件流。
- * 真实传输在 Task 4 接线；此处固定为协议边界的消费者契约。
+ * 直连 app-server 已放弃，实时数据走 Hook + JSONL。
+ * 本函数保留仅为避免误用旧入口；解析函数仍供快照归一化使用。
  */
 export async function* connectCodex(): AsyncIterable<unknown> {
-  throw new Error("app-server transport is wired in the executable entry point (Task 4)");
+  throw new Error("connectCodex is unused; live data comes from Hook + JSONL");
 }

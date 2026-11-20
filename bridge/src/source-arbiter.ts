@@ -1,10 +1,11 @@
 import type { BridgeEvent } from "./event-model.js";
 import type { BridgeSnapshot, BridgeStatus, UsageWindow } from "./model.js";
-import { normalizeCodexSnapshot, sanitizeLabel } from "./normalizer.js";
+import { normalizeCodexSnapshot, sanitizeTitle } from "./normalizer.js";
 import type { StateStore } from "./state-store.js";
 
 const HOOK_PRIORITY_MS = 10_000;
 const MAX_ACTIVITIES = 5;
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const TERMINAL = new Set<BridgeStatus>(["done", "error", "idle"]);
 
 const ACTIVITY_KIND: Record<string, string> = {
@@ -29,18 +30,18 @@ const ACTIVITY_KIND: Record<string, string> = {
 };
 
 const ACTIVITY_TEXT: Record<string, string> = {
-  UserPromptSubmit: "分析输入",
-  PreToolUse: "执行工具",
-  PostToolUse: "执行工具",
-  PermissionRequest: "等待用户处理",
-  Stop: "任务完成",
-  "event_msg:task_started": "处理中",
-  "event_msg:user_message": "分析输入",
-  "response_item:function_call": "执行工具",
-  "response_item:custom_tool_call": "执行工具",
-  "response_item:web_search_call": "检索网络",
-  "event_msg:task_complete": "任务完成",
-  "event_msg:turn_aborted": "任务中止",
+  UserPromptSubmit: "analyze input",
+  PreToolUse: "run tool",
+  PostToolUse: "run tool",
+  PermissionRequest: "wait input",
+  Stop: "task done",
+  "event_msg:task_started": "working",
+  "event_msg:user_message": "analyze input",
+  "response_item:function_call": "run tool",
+  "response_item:custom_tool_call": "run tool",
+  "response_item:web_search_call": "web search",
+  "event_msg:task_complete": "task done",
+  "event_msg:turn_aborted": "aborted",
 };
 
 export interface SourceArbiterOptions {
@@ -54,8 +55,10 @@ export interface SourceArbiter {
 
 interface SessionState {
   lastAcceptedAt: number;
+  lastHookAt: number;
   status: BridgeStatus;
   project: string;
+  title: string;
   model?: string;
   contextPercent?: number;
   usage: UsageWindow[];
@@ -78,11 +81,17 @@ export function createSourceArbiter(store: StateStore, options: SourceArbiterOpt
   const hookPriorityMs = options.hookPriorityMs ?? HOOK_PRIORITY_MS;
   const now = options.now ?? (() => Date.now());
   const sessions = new Map<string, SessionState>();
-  let lastHookAt = 0;
 
   function project(): void {
+    const clock = now();
+    // 驱逐长时间无活动的会话，避免 sessions 表与快照体积无界增长
+    for (const [id, session] of sessions) {
+      if (clock - session.at > SESSION_TTL_MS && isTerminal(session.status)) {
+        sessions.delete(id);
+      }
+    }
     const tasks = [...sessions.entries()].map(([id, session]) => {
-      const title = sanitizeLabel(session.project) || "Codex 任务";
+      const title = session.title || sanitizeTitle(session.project) || "Codex Task";
       const task: Record<string, unknown> = {
         id,
         title,
@@ -109,8 +118,11 @@ export function createSourceArbiter(store: StateStore, options: SourceArbiterOpt
   return {
     accept(event: BridgeEvent): boolean {
       const clock = now();
-      if (event.source === "jsonl" && lastHookAt > 0 && clock - lastHookAt < hookPriorityMs) return false;
       const current = sessions.get(event.sessionKey);
+      if (event.source === "jsonl") {
+        const sessionHookAt = current?.lastHookAt ?? 0;
+        if (sessionHookAt > 0 && clock - sessionHookAt < hookPriorityMs) return false;
+      }
       if (current && event.at < current.lastAcceptedAt) return false;
       if (current && isTerminal(current.status) && event.status === "working" && event.at <= current.at) return false;
 
@@ -127,8 +139,10 @@ export function createSourceArbiter(store: StateStore, options: SourceArbiterOpt
 
       const next: SessionState = {
         lastAcceptedAt: event.at,
+        lastHookAt: event.source === "hook" ? clock : (current?.lastHookAt ?? 0),
         status: event.event === "event_msg:token_count" && current ? current.status : event.status,
         project: event.project || current?.project || "",
+        title: event.title || current?.title || "",
         model: event.model ?? current?.model,
         contextPercent: event.contextPercent ?? current?.contextPercent,
         usage: mergeUsage(current?.usage ?? [], event.usage),
@@ -136,7 +150,6 @@ export function createSourceArbiter(store: StateStore, options: SourceArbiterOpt
         at: event.at,
       };
       sessions.set(event.sessionKey, next);
-      if (event.source === "hook") lastHookAt = clock;
       store.updateSourceHealth(event.source, event.source === "hook"
         ? { connected: true, lastEventAt: event.at }
         : { available: true, lastRecordAt: event.at, fileFound: true });

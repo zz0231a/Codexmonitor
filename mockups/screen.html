@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Token Monitor — Screen Mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0E17; --card:#141A28; --border:#222A3A; --track:#232B3D;
+    --text:#D5DBE5; --bright:#E8ECF5; --dim:#8A93A6;
+    --ok:#4ADE80; --warn:#FACC15; --err:#F87171; --off:#6B7484; --blue:#60A5FA;
+  }
+  html,body{margin:0;padding:0;background:#000;}
+  .screen{
+    width:320px;height:240px;position:relative;background:var(--bg);
+    font-family:'Montserrat',system-ui,sans-serif;overflow:hidden;
+    transform:scale(3);transform-origin:0 0;
+  }
+  .el{position:absolute;box-sizing:border-box;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:7px;}
+</style>
+</head>
+<body>
+<div class="screen" id="scr"></div>
+<script>
+const P = new URLSearchParams(location.search);
+const STATE = P.get('state') || 'working';
+
+const STATES = {
+  working:    { big:'WORKING',    sub:'task running',      accent:'var(--ok)',   taskBorder:null,          dim:false },
+  needs_user: { big:'NEEDS USER', sub:'waiting for input', accent:'var(--warn)', taskBorder:'var(--warn)', dim:false },
+  error:      { big:'ERROR',      sub:'something failed',  accent:'var(--err)',  taskBorder:null,          dim:false },
+  offline:    { big:'OFFLINE',    sub:'bridge offline',    accent:'var(--off)',  taskBorder:null,          dim:true  },
+};
+const S = STATES[STATE];
+
+// 8 slots: row 0-1, col 0-3. pct = remainingPercent (null = no data)
+const SLOTS = [
+  { id:'claude',     pct:82,  icon:true  },
+  { id:'codex',      pct:64,  icon:true  },
+  { id:'cursor',     pct:50,  icon:true  },
+  { id:'grok',       pct:100, icon:true  },
+  { id:'kimi',       pct:8,   icon:true  },
+  { id:'workbuddy',  pct:38,  icon:true,  short:'WBUDDY' },
+  { id:'opencode',   pct:null,icon:false, short:'OPENC'  },
+  { id:'antigravity',pct:20,  icon:false, short:'ANTIG'  },
+];
+// 本日用量最多的工具（显示在顶部标签位）
+const TOP_TOOL = 'CLAUDE';
+
+const STATS = { rate:'2.4K/m', today:'12.9M', d7:'166M', all:'2.2B' };
+const WEATHER = { city:'Shanghai', temp:'24C', note:'Cloudy' };
+const TASK = 'fix login page regression';
+
+const DIM = 'var(--off)';
+function txtColor(c){ return S.dim ? DIM : c; }
+function pctColor(p){
+  if (p === null) return 'var(--dim)';
+  if (p >= 80) return 'var(--ok)';
+  if (p >= 50) return 'var(--blue)';
+  if (p >= 20) return 'var(--warn)';
+  return 'var(--err)';
+}
+
+const scr = document.getElementById('scr');
+let h = '';
+
+// ---- top: status dot + top-tool label（本日用量最多的工具名） ----
+h += `<div class="el" style="left:8px;top:11px;width:8px;height:8px;border-radius:4px;background:${S.accent};"></div>`;
+h += `<div class="el" style="left:22px;top:9px;font-size:10px;font-weight:600;letter-spacing:2px;color:${txtColor('var(--dim)')};">${TOP_TOOL}</div>`;
+
+// ---- weather card ----
+h += `<div class="el card" style="left:234px;top:8px;width:78px;height:58px;"></div>`;
+h += `<div class="el" style="left:242px;top:13px;width:62px;text-align:right;font-size:8px;color:${txtColor('var(--dim)')};">${WEATHER.city}</div>`;
+h += `<div class="el" style="left:242px;top:24px;width:62px;text-align:right;font-size:16px;font-weight:600;color:${txtColor('var(--bright)')};">${WEATHER.temp}</div>`;
+h += `<div class="el" style="left:242px;top:47px;width:62px;text-align:right;font-size:8px;color:${txtColor('var(--dim)')};">${WEATHER.note}</div>`;
+
+// ---- state big + sub ----
+h += `<div class="el" style="left:8px;top:26px;width:220px;font-size:24px;font-weight:700;color:${S.accent};white-space:nowrap;">${S.big}</div>`;
+h += `<div class="el" style="left:8px;top:56px;width:220px;font-size:10px;color:${txtColor('var(--dim)')};">${S.sub}</div>`;
+
+// ---- task card ----
+const tb = S.taskBorder ? `border-color:${S.taskBorder};` : '';
+h += `<div class="el card" style="left:8px;top:72px;width:304px;height:26px;${tb}"></div>`;
+h += `<div class="el" style="left:16px;top:78px;width:4px;height:14px;border-radius:2px;background:${S.accent};"></div>`;
+h += `<div class="el" style="left:28px;top:78px;width:276px;font-size:12px;font-weight:500;color:${txtColor('var(--bright)')};white-space:nowrap;overflow:hidden;line-height:14px;">${TASK}</div>`;
+
+// ---- token board ----
+h += `<div class="el card" style="left:8px;top:102px;width:304px;height:104px;"></div>`;
+SLOTS.forEach((t, i) => {
+  const col = i % 4, row = (i / 4) | 0;
+  const sx = 8 + col * 76, sy = 102 + row * 52;
+  const arcC = 2 * Math.PI * 13.5;
+  const val = t.pct === null ? 0 : t.pct / 100 * arcC;
+  const ac = txtColor(pctColor(t.pct));
+  h += `<svg class="el" style="left:${sx+22}px;top:${sy+2}px;" width="30" height="30">
+    <circle cx="15" cy="15" r="13.5" fill="none" stroke="var(--track)" stroke-width="3"/>
+    <circle cx="15" cy="15" r="13.5" fill="none" stroke="${ac}" stroke-width="3"
+      stroke-dasharray="${val} ${arcC}" transform="rotate(-90 15 15)"/>
+  </svg>`;
+  if (t.icon) {
+    const dimStyle = S.dim ? 'filter:grayscale(1);opacity:.45;' : '';
+    // 图标居中铺满圆环内部（环外径 30、弧宽 3 → 内径 24，圆心 sx+37, sy+17）
+    h += `<img class="el" src="../cubic/package/assets/tm_${t.id}.png" style="left:${sx+25}px;top:${sy+5}px;width:24px;height:24px;border-radius:50%;object-fit:cover;${dimStyle}">`;
+  } else {
+    h += `<div class="el" style="left:${sx+22}px;top:${sy+9}px;width:30px;text-align:center;font-size:12px;font-weight:600;color:${txtColor('var(--bright)')};line-height:14px;">${t.id[0].toUpperCase()}</div>`;
+  }
+  h += `<div class="el" style="left:${sx}px;top:${sy+32}px;width:76px;text-align:center;font-size:8px;font-weight:600;color:${t.pct===null?txtColor('var(--dim)'):ac};">${t.pct===null?'--':t.pct+'%'}</div>`;
+  h += `<div class="el" style="left:${sx}px;top:${sy+42}px;width:76px;text-align:center;font-size:8px;color:${txtColor('var(--dim)')};">${t.short || t.id.toUpperCase()}</div>`;
+});
+
+// ---- bottom stats bar ----
+h += `<div class="el card" style="left:8px;top:208px;width:304px;height:28px;"></div>`;
+const cols = [['RATE',STATS.rate],['TODAY',STATS.today],['7D',STATS.d7],['ALL',STATS.all]];
+cols.forEach(([lab, val], i) => {
+  const x = 8 + i * 76;
+  h += `<div class="el" style="left:${x}px;top:210px;width:76px;text-align:center;font-size:8px;color:${txtColor('var(--dim)')};">${lab}</div>`;
+  h += `<div class="el" style="left:${x}px;top:220px;width:76px;text-align:center;font-size:8px;font-weight:600;color:${txtColor('var(--bright)')};">${val}</div>`;
+});
+
+scr.innerHTML = h;
+</script>
+</body>
+</html>

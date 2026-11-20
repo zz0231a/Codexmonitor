@@ -5,7 +5,8 @@
 本文是 `Codex Monitor` 后续开发的现行设计规范，替代
 `2026-09-17-codex-cubic-monitor-design.md` 中关于 Codex `app-server`
 直连、桥接程序数据来源和设备部署方式的相关设计。旧文档中已经实现且不与本文冲突的
-状态模型、隐私约束、两页界面和降级原则继续有效。
+状态模型、隐私约束和降级原则继续有效。屏幕仍是两页，但第 2 页已从活动列表改为水族箱；
+设备文案因固件字体无 CJK 字形而使用 ASCII。界面以仓库当前源码为准（设备包 `0.6.0`）。
 
 目标设备为 Cubic，当前局域网地址为 `10.23.2.209`，固件控制台版本为
 `v1.212`。设备应用通过控制台安装、打开、退出并选择为开机自启动应用。
@@ -13,8 +14,8 @@
 ## 2. 目标与完成标准
 
 将现有原型完善为可由 Cubic 控制台管理的原生设备应用。用户在 Windows 上安装一次
-桥接程序后，副屏能够实时显示本机 Codex 的生命周期状态、主要任务、近期安全活动摘要、
-模型信息及可取得的用量信息。
+桥接程序后，副屏显示本机 Codex 的生命周期状态，以及 Token Monitor 汇总的多工具用量。
+Codex 活动不再单独成页，最近一条安全摘要出现在第 1 页任务行。
 
 本阶段完成标准：
 
@@ -36,13 +37,12 @@
 采用“Codex Hook 主通道 + session JSONL 元数据兜底 + 本地只读 Bridge”的混合方案。
 
 ```text
-Codex lifecycle hooks --------------------+
-                                           |
-Codex session JSONL metadata fallback -----+--> Windows Bridge
-                                                   |
-                                                   | HTTP JSON
-                                                   v
-                                            Cubic Codex Monitor
+Codex lifecycle hooks ------------------+
+                                         |
+Codex session JSONL metadata fallback ---+--> Windows Bridge --> HTTP JSON --> Cubic
+                                         ^         |
+                                         |         | 只读 hub-devices.json（每 5 秒）
+                                    Token Monitor 本地库
 ```
 
 Hook 提供低延迟、明确的生命周期事件。JSONL 兜底只增量读取事件类型、状态和用量等
@@ -60,11 +60,12 @@ Hook 提供低延迟、明确的生命周期事件。JSONL 兜底只增量读取
 
 ### 4.1 模块边界
 
-Bridge 保留现有 TypeScript 状态模型、归一化、脱敏和只读 HTTP 服务，并增加三个独立模块：
+Bridge 保留现有 TypeScript 状态模型、归一化、脱敏和只读 HTTP 服务，并包含这些独立模块：
 
 1. Hook 接收模块：在本机接收 Codex Hook 进程提交的单个事件，校验后更新状态；
 2. JSONL 监视模块：发现当前活跃 session，记录文件偏移并只解析新增记录的元数据；
-3. 安装模块：幂等地写入或移除本应用所属 Hook 配置，并建立当前用户级 Windows 登录启动项。
+3. Token Monitor 读盘模块：读取本机 Token Monitor 的 `hub-devices.json`，投影成设备用量；
+4. 安装模块：幂等地写入或移除本应用所属 Hook 配置，并建立当前用户级 Windows 登录启动项。
 
 协议解析与状态归一化保持分离。设备公开模型继续使用 `schemaVersion: 1`，避免设备端
 跟随 Codex 内部字段变化。
@@ -104,8 +105,8 @@ message content、reasoning content、tool arguments、tool results 和文件正
 
 Hook 事件与 JSONL 记录冲突时采用以下顺序：
 
-1. 最近 10 秒内的 Hook 状态优先；
-2. Hook 超时后允许 JSONL 推进状态；
+1. 同一 session 最近 10 秒内的 Hook 状态优先，不挡住其他 session 的 JSONL；
+2. 该 session 的 Hook 窗口超时后允许 JSONL 推进其状态；
 3. 任一来源均不得把较新的终态倒退为较旧的运行态；
 4. 数据源异常只影响连接或状态标记，不终止 HTTP 服务。
 
@@ -124,14 +125,20 @@ Bridge 默认端口继续使用 `8973`。安装时监听局域网可达地址，
 `10.23.2.209` 作为初始允许设备地址。设备地址变化时，用户可在 Bridge 配置中更新白名单；
 程序不得自动扩大为公网访问，也不得自动修改 Windows 防火墙或其他安全策略。
 
-`/api/v1/health` 分别报告 Bridge、Hook、JSONL fallback 和 Codex 活跃状态，便于管理页
-区分“电脑不可达”“Bridge 正常但 Codex 空闲”和“Hook 未生效”。
+`/api/v1/health` 报告 Bridge、Hook、JSONL、Token Monitor 和 Codex 连接标记。
+Hook 已连接、JSONL 可用或 Codex 快照仍标记连接时返回 200，否则 503。
+Token Monitor 单独陈旧或缺失不会把健康检查打成 503。
 
 ### 4.5 用量数据
 
-优先从本地 session telemetry 最近一次 `rate_limits` 元数据读取 300 分钟和 10080 分钟窗口。
-仍按 `windowDurationMins` 识别窗口，不依赖字段顺序。若当前 Codex 版本不再写入其中一个窗口，
-对应位置显示 `--`，不得保留成看似实时的旧值。
+Codex 自身用量仍从 session telemetry 的 `rate_limits` 读取，并兼容官方 `primary` /
+`secondary` 对象。窗口按 `windowDurationMins` 识别 300 分钟和 10080 分钟，不依赖字段顺序。
+这两个窗口继续出现在公开快照里。当前设备界面不绘制它们。
+
+副屏上的圆环、鱼的颜色和底部 `TODAY` / `7D` / `ALL` 来自 Token Monitor：
+全部设备的 token 合计进底部三项，额度百分比只用本机账号。工具按全时段 token 取前 8，
+水族箱再用其中前 6。`activeToolId` 是相邻采样中当日 token 增长最多的工具，连续 60 秒无增长后清空。
+超过 32 位有符号整数上限的计数以十进制字符串下发。
 
 ## 5. Cubic 原生应用
 
@@ -157,16 +164,31 @@ Bridge 默认端口继续使用 `8973`。安装时监听局域网可达地址，
 
 ### 5.3 屏幕界面
 
-保留现有深色像素终端风和两页结构：
+两页 320×240，左右键手动切换，不自动轮播，HOME 退出。
 
-- 第 1 页：Codex 状态、主要任务、模型、上下文信息、天气和 5 小时/7 天用量；
-- 第 2 页：最近五条安全活动摘要、需要用户处理标记及其他活动任务数量。
+- 第 1 页是深色驾驶舱：状态圆点与大字状态、本日 token 最高工具的短名、本地时钟、天气、
+  一行任务摘要（英文状态加最近一条活动摘要）、总用量前八的小圆环，以及底部
+  `RATE / TODAY / 7D / ALL`。圆环图标 17px 并做圆形裁切。没有 Codex 上下文环，
+  也没有 Codex 5 小时 / 7 天进度条。
+- 第 2 页是 Agent Tank：总用量前六名各一条鱼。体型按名次固定，颜色与圆环同一套余额档。
+  主角鱼优先是 Codex，否则是第一名。working 时沿固定泳道游动，速度随全机 token 速率升高；
+  idle 或离线时沉底；`needs_user` 时主角贴玻璃并显示 `NEED INPUT`；`error` 时主角翻白肚。
+  吐泡优先给等待输入的主角，否则给 `activeToolId` 对应的上榜鱼。鱼和 logo 用 LVGL
+  线性动画移动，只在第 2 页可见时跑；没有该接口时按真实间隔降级。底栏与第 1 页相同。
 
-页面每 30 秒轮播，左右键手动切换并重置计时，HOME 退出。天气读取 Cubic 系统设置中的
-位置；若固件没有可验证的系统天气读取接口，则保持 `--`，不能自行引入未经说明的第三方密钥。
+`primary_task` 的标题、模型、上下文百分比，以及其他活动任务数量，设备会解析但两页都不绘制。
+快照里没有可用标题时，Bridge 仍用 `Codex Task`。
 
-设备继续每秒请求一次 `/api/v1/status`。连续三次失败后进入离线状态，保留最后一次安全数据
-并整体降暗；连接恢复后自动回到实时状态。
+固件内置 Montserrat 只有 ASCII 字形。Bridge 的活动摘要 `sanitizeLabel` 与设备端 `ascii_only`
+都会剥离非 ASCII。任务标题在 Bridge 侧可保留中文，画到屏幕上时被设备剥掉；剥空显示 `[zh]`，
+天气城市和概况再显示为 `--`。不要把中文文案画到屏幕上。
+
+天气走固件 `http.cubicserver` 的 `/v1/weather/now`（与系统天气应用同一通道），地点来自
+`/sd/apps/settings.json` 的 `weather_location_id` / `weather_address`；`lang=en` 以便 ASCII 显示。
+不引入第三方天气密钥。
+
+设备每秒请求一次 `/api/v1/status`。连续三次失败后进入离线状态，保留最后一次安全数据
+并整体降暗；连接恢复后自动回到实时状态。长标签设置宽度并裁切，避免压到相邻卡片。
 
 ## 6. 安全与隐私
 
@@ -196,8 +218,8 @@ Bridge 默认端口继续使用 `8973`。安装时监听局域网可达地址，
 - JSONL 增量读取及敏感字段不被访问或输出；
 - 安装、重复安装和卸载均只影响本应用条目；
 - HTTP 方法限制、IP 白名单、离线和陈旧状态；
-- 300 分钟和 10080 分钟用量窗口；
-- Lua 语法、manifest、配置页和资源释放契约。
+- 300 分钟和 10080 分钟用量窗口，以及 Token Monitor 的多设备合计、`activeToolId` 和大整数编码；
+- Lua 语法、manifest、配置页、水族箱资源和切页契约。
 
 ### 8.2 真机验证
 

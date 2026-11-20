@@ -1,3 +1,3 @@
 {"timestamp":"2026-09-18T00:00:00Z","type":"session_meta","payload":{"id":"raw-session","cwd":"C:\\Users\\me\\project"}}
-{"timestamp":"2026-09-18T00:00:01Z","type":"event_msg","payload":{"type":"user_message","message":"DO_NOT_LEAK_PROMPT"}}
+{"timestamp":"2026-09-18T00:00:01Z","type":"event_msg","payload":{"type":"user_message","message":"Add the clock\nDO_NOT_LEAK_PROMPT"}}
 {"timestamp":"2026-09-18T00:00:02Z","type":"event_msg","payload":{"type":"task_started"

@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Agent Tank 320x240 v6</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:320px;height:240px;overflow:hidden;background:#061018}
+body{
+  font-family:"Segoe UI",Montserrat,system-ui,sans-serif;
+  color:#D5DBE5;
+}
+.screen{width:320px;height:240px;position:relative;overflow:hidden;background:#061018}
+html.capture,html.capture body{width:640px;height:480px;background:#000}
+html.capture .screen{transform:scale(2);transform-origin:top left}
+
+.water{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 220px 90px at 50% -10%, rgba(56,189,248,.16), transparent 70%),
+    linear-gradient(180deg,#08202c 0%,#07141c 48%,#050d14 100%);
+}
+.water.wait{
+  background:
+    radial-gradient(ellipse 180px 80px at 88% 42%, rgba(250,204,21,.18), transparent 60%),
+    radial-gradient(ellipse 220px 90px at 50% -10%, rgba(56,189,248,.10), transparent 70%),
+    linear-gradient(180deg,#1a1808 0%,#0d120c 48%,#070b0a 100%);
+}
+.water.idle{
+  background:
+    radial-gradient(ellipse 160px 70px at 70% -8%, rgba(148,163,184,.14), transparent 70%),
+    linear-gradient(180deg,#061018 0%,#040a10 55%,#03070c 100%);
+}
+.water.error{
+  background:
+    radial-gradient(ellipse 160px 90px at 40% 50%, rgba(248,113,113,.16), transparent 65%),
+    linear-gradient(180deg,#140808 0%,#0c1014 50%,#05080c 100%);
+}
+.caustics{
+  position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 90px 28px at 28% 6%, rgba(125,211,252,.14), transparent 70%),
+    radial-gradient(ellipse 70px 22px at 68% 2%, rgba(165,243,252,.10), transparent 70%),
+    repeating-linear-gradient(105deg, transparent 0 22px, rgba(186,230,253,.02) 22px 26px);
+  mix-blend-mode:screen;
+}
+.idle .caustics{opacity:.45}
+.surface{
+  position:absolute;left:0;right:0;top:0;height:18px;
+  background:linear-gradient(180deg, rgba(186,230,253,.18), transparent);
+  border-bottom:1px solid rgba(186,230,253,.12);
+}
+.bed{
+  position:absolute;left:0;right:0;bottom:48px;height:28px;
+  background:
+    radial-gradient(ellipse 8px 5px at 12% 70%, #1c2733 0 60%, transparent 61%),
+    radial-gradient(ellipse 11px 6px at 28% 80%, #243040 0 60%, transparent 61%),
+    radial-gradient(ellipse 7px 4px at 46% 65%, #1a2430 0 60%, transparent 61%),
+    radial-gradient(ellipse 10px 6px at 64% 78%, #222e3c 0 60%, transparent 61%),
+    radial-gradient(ellipse 8px 5px at 82% 70%, #1c2836 0 60%, transparent 61%),
+    linear-gradient(180deg, transparent 0%, #0b151e 70%, #081018 100%);
+}
+.weed{position:absolute;bottom:52px;opacity:.85;transform-origin:bottom center;animation:sway 5.5s ease-in-out infinite}
+.weed path{fill:none;stroke:#14532d;stroke-width:2;stroke-linecap:round}
+.weed.w2 path{stroke:#166534}
+.weed.w3 path{stroke:#15803d}
+.weed.w4 path{stroke:#0f4a28}
+@keyframes sway{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+.glass{
+  position:absolute;inset:0;pointer-events:none;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.08),
+    inset 18px 0 28px -18px rgba(186,230,253,.10),
+    inset -10px 0 22px -12px rgba(0,0,0,.35);
+}
+.hit{
+  position:absolute;top:24px;right:0;width:36px;height:130px;
+  background:linear-gradient(90deg, transparent, rgba(250,204,21,.28));
+  pointer-events:none;
+  animation:pulse 1.1s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+.bubble{
+  position:absolute;border-radius:50%;
+  border:1px solid rgba(186,230,253,.45);
+  background:rgba(186,230,253,.08);
+  animation:rise 4.8s linear infinite;
+}
+.mouth-bubble{
+  position:absolute;border-radius:50%;
+  border:1px solid rgba(186,230,253,.6);
+  background:rgba(186,230,253,.14);
+  animation:mouthRise 3.2s linear infinite;
+}
+@keyframes rise{
+  0%{transform:translateY(0);opacity:.7}
+  100%{transform:translateY(-150px);opacity:0}
+}
+@keyframes mouthRise{
+  0%{transform:translate(0,0) scale(.6);opacity:.9}
+  60%{transform:translate(-4px,-56px) scale(1);opacity:.8}
+  100%{transform:translate(-7px,-92px) scale(1.25);opacity:0}
+}
+
+.agent{position:absolute}
+.agent .flip{position:relative}
+.agent svg{display:block;overflow:visible}
+/* logo 在 flip 层内：鱼调头时随身体一起镜像，始终位于尾巴后方 */
+.agent .logo{
+  position:absolute;left:0;top:50%;
+  transform:translate(-72%,-50%);
+  border-radius:50%;
+  opacity:.95;filter:drop-shadow(0 0 2px rgba(0,0,0,.6));
+}
+.agent .tag{
+  position:absolute;left:50%;top:-12px;transform:translateX(-50%);
+  font-size:8px;font-weight:700;letter-spacing:.2px;line-height:1;
+  background:rgba(6,12,20,.78);padding:2px 3px;border-radius:3px;
+  white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+.agent .tag .who{color:#C9D1E0;letter-spacing:.4px;margin-right:3px}
+.agent .tag .slash{color:#8A93A6;margin:0 1px;font-weight:600}
+.agent .body,.agent .tail,.agent .fin{fill:currentColor}
+.agent .belly{fill:#fff;opacity:.18}
+.agent .eye{fill:#061018}
+.agent .glint{fill:#fff}
+.agent .xeye{stroke:#061018;stroke-width:1.3;stroke-linecap:round}
+.bal-ok{color:#4ADE80}
+.bal-info{color:#60A5FA}
+.bal-warn{color:#FACC15}
+.bal-err{color:#F87171}
+.bal-dim{color:#8A93A6}
+.agent.dim{opacity:.72}
+.agent.dead svg{transform:rotate(165deg);transform-origin:50% 50%}
+.agent.dead .logo{opacity:.45}
+
+.bang{
+  position:absolute;right:-2px;top:-14px;
+  width:12px;height:12px;border-radius:50%;
+  background:#FACC15;color:#1a1400;
+  font-size:9px;font-weight:800;line-height:12px;text-align:center;
+  box-shadow:0 0 8px rgba(250,204,21,.85);
+  animation:pulse 1.1s ease-in-out infinite;
+}
+.zzz{
+  position:absolute;right:2px;top:-14px;
+  font-size:8px;font-weight:700;letter-spacing:1px;color:#94A3B8;
+  animation:floatz 2.2s ease-in-out infinite;
+}
+@keyframes floatz{
+  0%,100%{transform:translateY(0);opacity:.5}
+  50%{transform:translateY(-4px);opacity:1}
+}
+
+.shrimp{position:absolute;opacity:.75}
+.shrimp .flip{position:relative}
+.shrimp svg{display:block;overflow:visible}
+.shrimp .sh-body{fill:none;stroke:#B8CCE0;stroke-width:1.6;stroke-linecap:round}
+.shrimp .sh-leg{fill:none;stroke:#8FA9C2;stroke-width:1;stroke-linecap:round}
+.shrimp .sh-eye{fill:#B8CCE0}
+
+.hud-top{
+  position:absolute;left:8px;right:8px;top:6px;height:18px;
+  display:flex;align-items:center;z-index:6;
+  text-shadow:0 1px 4px rgba(0,0,0,.85);
+}
+.dot{
+  width:6px;height:6px;border-radius:50%;margin-right:6px;flex:none;
+  background:#4ADE80;box-shadow:0 0 6px rgba(74,222,128,.9);
+}
+.dot.y{background:#FACC15;box-shadow:0 0 6px rgba(250,204,21,.9)}
+.dot.g{background:#6B7484;box-shadow:none}
+.dot.r{background:#F87171;box-shadow:0 0 6px rgba(248,113,113,.9)}
+.brand{
+  font-size:10px;font-weight:700;letter-spacing:2px;color:#8A93A6;
+}
+.sub{
+  margin-left:8px;font-size:9px;font-weight:800;letter-spacing:1.2px;
+}
+.sub.ok{color:#4ADE80}
+.sub.warn{color:#FACC15}
+.sub.err{color:#F87171}
+.sub.off{color:#6B7484}
+.clock{
+  margin-left:auto;font-size:8px;letter-spacing:1px;color:#8A93A6;font-variant-numeric:tabular-nums;
+}
+.legend{
+  margin-left:8px;font-size:8px;font-weight:700;letter-spacing:.4px;color:#8A93A6;
+}
+.legend b{color:#D5DBE5;font-weight:700}
+.wait-banner{
+  position:absolute;left:50%;top:26px;transform:translateX(-50%);
+  z-index:6;
+  font-size:9px;font-weight:800;letter-spacing:1.6px;color:#FACC15;
+  background:rgba(20,16,0,.62);
+  border:1px solid rgba(250,204,21,.45);
+  border-radius:8px;padding:2px 8px;
+  box-shadow:0 0 10px rgba(250,204,21,.25);
+}
+
+.stats{
+  position:absolute;left:8px;top:190px;width:304px;height:44px;z-index:8;
+  background:#141A28;border:1px solid #222A3A;border-radius:7px;
+  display:flex;align-items:center;
+}
+.stats .col{flex:1;text-align:center;min-width:0}
+.stats .sl{font-size:8px;letter-spacing:2px;color:#8A93A6;font-weight:600;line-height:1}
+.stats .sv{margin-top:3px;font-size:14px;font-weight:800;color:#E8ECF5;letter-spacing:.2px;line-height:1.1}
+.stats .sv.off{color:#6B7484}
+</style>
+</head>
+<body>
+<script>
+const P = new URLSearchParams(location.search);
+const STATE = P.get('state') || 'working';
+const RATE = Math.max(0, Number(P.get('rate') || 2400)); // tokens/min，驱动游速
+
+// 游速与 rate 挂钩：0 t/m -> 7px/s，6000+ t/m -> 38px/s；中间线性
+function swimSpeed(rate, i){
+  return (7 + Math.min(rate, 6000) / 6000 * 31) * (1 + i * 0.12);
+}
+
+const SVG = {
+  live: (w,h) => `<svg viewBox="0 0 54 26" width="${w}" height="${h}">
+    <polygon class="tail" points="11,13 0,5 3,13 0,21"/>
+    <polygon class="fin" points="22,4 31,2 28,11"/>
+    <polygon class="fin" points="24,22 33,24 29,16"/>
+    <ellipse class="body" cx="30" cy="13" rx="17" ry="9.5"/>
+    <ellipse class="belly" cx="33" cy="16" rx="10" ry="4.5"/>
+    <circle class="eye" cx="42" cy="11" r="2.3"/>
+    <circle class="glint" cx="42.8" cy="10.3" r=".7"/>
+  </svg>`,
+  dead: (w,h) => `<svg viewBox="0 0 54 26" width="${w}" height="${h}">
+    <polygon class="tail" points="11,13 0,5 3,13 0,21"/>
+    <polygon class="fin" points="22,4 31,2 28,11"/>
+    <polygon class="fin" points="24,22 33,24 29,16"/>
+    <ellipse class="body" cx="30" cy="13" rx="17" ry="9.5"/>
+    <ellipse class="belly" cx="33" cy="16" rx="10" ry="4.5"/>
+    <line class="xeye" x1="39.4" y1="8.4" x2="44.4" y2="13.4"/>
+    <line class="xeye" x1="44.4" y1="8.4" x2="39.4" y2="13.4"/>
+  </svg>`,
+  shrimp: (s) => `<svg viewBox="0 0 16 12" width="${s}" height="${Math.round(s*0.75)}">
+    <path class="sh-body" d="M2 9 C2 4, 6 1.5, 10 2.5 C13 3.4, 14 6, 12.5 8"/>
+    <path class="sh-body" d="M12.5 8 L15 9.5 M12.5 8 L14.5 6" />
+    <path class="sh-leg" d="M5 8.5 L4 11 M8 8 L7.4 11 M11 6.8 L10.8 10"/>
+    <path class="sh-leg" d="M3 3.5 C1.5 2, 1 1, 0.5 0.2 M4.2 2.8 C3 1.4, 2.8 0.8, 2.6 0"/>
+    <circle class="sh-eye" cx="3.4" cy="4.6" r="0.9"/>
+  </svg>`
+};
+
+const STATS = { rate:'2.4K/m', today:'12.9M', d7:'166M', all:'2.2B' };
+
+function usageClass(pct){
+  if (pct == null) return 'bal-dim';
+  if (pct >= 80) return 'bal-ok';
+  if (pct >= 50) return 'bal-info';
+  if (pct >= 20) return 'bal-warn';
+  return 'bal-err';
+}
+
+function pctText(pct){
+  return pct == null ? '--' : String(pct);
+}
+
+// 鱼身颜色按 5 小时余额；标签里两个数各自按档上色。h5 在前，d7 在后。
+function balanceTag(t){
+  return `<span class="who">${t.tag}</span><span class="${usageClass(t.h5)}">${pctText(t.h5)}</span><span class="slash">/</span><span class="${usageClass(t.d7)}">${pctText(t.d7)}</span>`;
+}
+
+// 体型按总用量排名；logo 尺寸随鱼高自适应（约鱼高的 62%）
+const TOP4 = [
+  { tag:'CL', h5:82,  d7:61,  w:56, h:28, logo:'claude' },
+  { tag:'CX', h5:64,  d7:22,  w:48, h:24, logo:'codex' },
+  { tag:'CR', h5:50,  d7:88,  w:38, h:22, logo:'cursor' },
+  { tag:'GK', h5:100, d7:null, w:34, h:16, logo:'grok' }
+];
+
+// 场景定义：mode = swim(往返游) / tap(贴玻璃) / dead(翻肚) / sleep(沉底)
+const scenes = {
+  working: {
+    water:'', dot:'', sub:'WORKING', subCls:'ok', banner:'', hit:false,
+    rate: STATS.rate,
+    fish: [
+      { id:'CL', mode:'swim', x:36,  y:62 },
+      { id:'CX', mode:'swim', x:168, y:48 },
+      { id:'CR', mode:'swim', x:210, y:108 },
+      { id:'GK', mode:'swim', x:92,  y:122 }
+    ],
+    shrimps: [[60,172,9],[150,178,7],[246,168,8]],
+    bubbles: ''
+  },
+  wait: {
+    water:'wait', dot:'y', sub:'NEEDS USER', subCls:'warn', banner:'NEED INPUT', hit:true,
+    rate: STATS.rate,
+    fish: [
+      { id:'CL', mode:'swim', x:22,  y:78 },
+      { id:'GK', mode:'swim', x:148, y:58 },
+      { id:'CR', mode:'swim', x:48,  y:128 },
+      { id:'CX', mode:'tap',  x:254, y:86, extra:'<div class="bang">!</div>' }
+    ],
+    bubbles: { x:292, y:92 }, // 主角嘴边吐泡位置
+    shrimps: [[70,176,8],[210,172,9]]
+  },
+  error: {
+    water:'error', dot:'r', sub:'ERROR', subCls:'err', banner:'', hit:false,
+    rate: STATS.rate,
+    fish: [
+      { id:'CL', mode:'swim', x:196, y:108 },
+      { id:'CX', mode:'dead', x:70,  y:68 },
+      { id:'CR', mode:'swim', x:210, y:48 },
+      { id:'GK', mode:'swim', x:28,  y:122 }
+    ],
+    shrimps: [[120,176,8],[255,170,7]],
+    bubbles: ''
+  },
+  idle: {
+    water:'idle', dot:'g', sub:'IDLE', subCls:'off', banner:'', hit:false,
+    rate: '--',
+    fish: [
+      { id:'CL', mode:'sleep', x:18,  y:148, extra:'<div class="zzz">z</div>' },
+      { id:'CX', mode:'sleep', x:92,  y:152, extra:'<div class="zzz">z</div>' },
+      { id:'CR', mode:'sleep', x:168, y:156 },
+      { id:'GK', mode:'sleep', x:236, y:160 }
+    ],
+    shrimps: [[140,172,8]],
+    bubbles: ''
+  }
+};
+
+if (P.get('capture') === '1') document.documentElement.classList.add('capture');
+
+const S = scenes[STATE] || scenes.working;
+const rateCls = S.rate === '--' ? ' off' : '';
+
+// 生成鱼 DOM：.flip 层（鱼身+logo，调头时整体镜像）+ 不翻转的 tag
+const swimmers = [];
+const fishHtml = S.fish.map((f, i) => {
+  const t = TOP4.find(x => x.tag === f.id);
+  const shape = f.mode === 'dead' ? 'dead' : 'live';
+  const label = balanceTag(t);
+  const logoSize = Math.round(t.h * 0.62);
+  const dir = f.mode === 'tap' ? 1 : (i % 2 === 0 ? 1 : -1); // tap 面朝右玻璃；其余初始朝向交错
+  swimmers.push({
+    idx: swimmers.length, mode: f.mode,
+    x: f.x, baseY: f.y, w: t.w, dir,
+    speed: swimSpeed(STATE === 'idle' ? 0 : RATE, i),
+    phase: i * 1.7
+  });
+  const dimCls = f.mode === 'sleep' ? ' dim' : '';
+  return `<div class="agent ${usageClass(t.h5)}${f.mode === 'dead' ? ' dead' : ''}${dimCls}" style="left:${f.x}px;top:${f.y}px">
+    <div class="flip" style="transform:scaleX(${dir})">
+      <img class="logo" src="../../package/assets/tm_${t.logo}.png" style="width:${logoSize}px;height:${logoSize}px">
+      ${SVG[shape](t.w, t.h)}
+    </div>
+    <span class="tag">${label}</span>${f.extra || ''}
+  </div>`;
+}).join('');
+
+// 小虾米：也慢慢来回游，到头调头
+const shrimpSwimmers = [];
+const shrimpHtml = (S.shrimps || []).map(([x, y, s], i) => {
+  shrimpSwimmers.push({ idx: i, x, baseY: y, w: s, dir: i % 2 === 0 ? 1 : -1, speed: 2.5 + i, phase: i * 2.3 });
+  return `<div class="shrimp" style="left:${x}px;top:${y}px">
+    <div class="flip" style="transform:scaleX(${i % 2 === 0 ? 1 : -1})">${SVG.shrimp(s)}</div>
+  </div>`;
+}).join('');
+
+function mouthBubbles(x, y){
+  let out = '';
+  for (let i = 0; i < 5; i++){
+    const s = 2 + (i % 3);
+    out += `<div class="mouth-bubble" style="left:${x - i % 2 * 3}px;top:${y}px;width:${s}px;height:${s}px;animation-delay:${(i * 0.64).toFixed(2)}s"></div>`;
+  }
+  return out;
+}
+
+const weeds = [
+  `<svg class="weed" style="left:8px" width="18" height="62" viewBox="0 0 18 62">
+    <path d="M9 62 C4 46, 14 34, 6 18 C2 8, 12 6, 9 0"/>
+    <path d="M11 62 C16 44, 8 30, 14 14" stroke="#166534"/>
+  </svg>`,
+  `<svg class="weed w2" style="left:64px;animation-delay:.9s" width="14" height="36" viewBox="0 0 14 36">
+    <path d="M7 36 C3 26, 11 18, 5 8 C2 3, 9 2, 7 0"/>
+  </svg>`,
+  `<svg class="weed w3" style="left:150px;animation-delay:1.7s" width="12" height="26" viewBox="0 0 12 26">
+    <path d="M6 26 C2 18, 10 12, 4 4 C2 1, 8 1, 6 0"/>
+  </svg>`,
+  `<svg class="weed w2" style="left:236px;animation-delay:.4s" width="15" height="44" viewBox="0 0 15 44">
+    <path d="M7 44 C2 32, 12 24, 5 10 C2 4, 10 3, 7 0"/>
+    <path d="M10 44 C14 34, 7 26, 12 16" stroke="#14532d"/>
+  </svg>`,
+  `<svg class="weed" style="left:292px;animation-delay:2.3s" width="16" height="50" viewBox="0 0 16 50">
+    <path d="M8 50 C3 36, 12 26, 5 12 C2 5, 10 3, 8 0"/>
+  </svg>`
+].join('');
+
+document.body.innerHTML = `
+<div class="screen">
+<div class="water ${S.water}">
+  <div class="caustics"></div>
+  <div class="surface"></div>
+  ${weeds}
+  <div class="bed"></div>
+  <div class="bubble" style="left:52px;bottom:48px;width:5px;height:5px;animation-delay:0s"></div>
+  <div class="bubble" style="left:128px;bottom:44px;width:3px;height:3px;animation-delay:1.4s"></div>
+  <div class="bubble" style="left:210px;bottom:50px;width:4px;height:4px;animation-delay:.6s"></div>
+  <div class="bubble" style="left:88px;bottom:40px;width:3px;height:3px;animation-delay:2.2s"></div>
+  ${shrimpHtml}
+  ${fishHtml}
+  ${S.bubbles ? mouthBubbles(S.bubbles.x, S.bubbles.y) : ''}
+  ${S.hit ? '<div class="hit"></div>' : ''}
+  <div class="glass"></div>
+</div>
+<div class="hud-top">
+  <span class="dot ${S.dot}"></span>
+  <span class="brand">CLAUDE</span>
+  <span class="sub ${S.subCls}">${S.sub}</span>
+  <span class="legend"><b>5H</b>/<b>7D</b></span>
+  <span class="clock">14:22</span>
+</div>
+${S.banner ? `<div class="wait-banner">${S.banner}</div>` : ''}
+<div class="stats">
+  <div class="col"><div class="sl">RATE</div><div class="sv${rateCls}">${S.rate}</div></div>
+  <div class="col"><div class="sl">TODAY</div><div class="sv">${STATS.today}</div></div>
+  <div class="col"><div class="sl">7D</div><div class="sv">${STATS.d7}</div></div>
+  <div class="col"><div class="sl">ALL</div><div class="sv">${STATS.all}</div></div>
+</div>
+</div>
+`;
+
+// JS 驱动游动：到缸边调头，logo 随 flip 层镜像始终在尾后；速度 = f(RATE)
+const agentEls = Array.from(document.querySelectorAll('.agent'));
+const shrimpEls = Array.from(document.querySelectorAll('.shrimp'));
+swimmers.forEach(f => { f.el = agentEls[f.idx]; f.flipEl = f.el.querySelector('.flip'); });
+shrimpSwimmers.forEach(s => { s.el = shrimpEls[s.idx]; s.flipEl = s.el.querySelector('.flip'); });
+
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  for (const f of swimmers){
+    if (f.mode === 'swim'){
+      f.x += f.dir * f.speed * dt;
+      const minX = 6, maxX = 314 - f.w;
+      if (f.x <= minX){ f.x = minX; f.dir = 1; f.flipEl.style.transform = 'scaleX(1)'; }
+      if (f.x >= maxX){ f.x = maxX; f.dir = -1; f.flipEl.style.transform = 'scaleX(-1)'; }
+      const bob = Math.sin(now / 600 + f.phase) * 3;
+      f.el.style.left = f.x + 'px';
+      f.el.style.top = (f.baseY + bob) + 'px';
+    } else if (f.mode === 'tap'){
+      // 贴玻璃叩击：原地快速轻颤
+      const j = Math.sin(now / 130) > 0 ? 1.5 : 0;
+      f.el.style.left = (f.x + j) + 'px';
+    }
+    // dead / sleep 不动
+  }
+  for (const s of shrimpEls.length ? shrimpSwimmers : []){
+    s.x += s.dir * s.speed * dt;
+    const minX = 10, maxX = 306 - s.w;
+    if (s.x <= minX){ s.x = minX; s.dir = 1; s.flipEl.style.transform = 'scaleX(1)'; }
+    if (s.x >= maxX){ s.x = maxX; s.dir = -1; s.flipEl.style.transform = 'scaleX(-1)'; }
+    const bob = Math.sin(now / 900 + s.phase) * 1.5;
+    s.el.style.left = s.x + 'px';
+    s.el.style.top = (s.baseY + bob) + 'px';
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

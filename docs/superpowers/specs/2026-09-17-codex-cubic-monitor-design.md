@@ -1,5 +1,9 @@
 # Codex Cubic Monitor 设计说明
 
+本文是 2026-09-17 的原始方案，其中的 app-server 直连、像素终端风、30 秒轮播和活动页
+已被后续实现替代。现行行为见 `2026-09-18-codex-monitor-hook-native-app-design.md` 与
+`docs/项目解读报告.md`。下面正文保留当时的决策记录，不代表当前屏幕。
+
 ## 1. 目标
 
 为 320×240 Cubic 设备开发一个 Codex 状态副屏应用，实时展示本机 Windows 上 Codex Desktop 的工作状态、当前主任务、近期活动、5 小时与 7 天剩余用量，以及 Cubic 系统天气。

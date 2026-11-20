@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import type { ActivityStage, BridgeStatus, UsageWindow } from "./model.js";
 import { normalizeUsageWindow } from "./model.js";
+import { sanitizeTitle } from "./normalizer.js";
 
-export type BridgeSource = "hook" | "jsonl";
+export type BridgeSource = "hook" | "jsonl" | "tokenMonitor";
 
 export interface BridgeEvent {
   source: BridgeSource;
@@ -13,6 +14,7 @@ export interface BridgeEvent {
   sessionKey: string;
   subagentKey?: string;
   project: string;
+  title?: string;
   model?: string;
   toolCategory?: string;
   contextPercent?: number;
@@ -22,11 +24,13 @@ export interface BridgeEvent {
 export interface SourceHealth {
   hook: { lastEventAt: number; connected: boolean };
   jsonl: { lastRecordAt: number; available: boolean; fileFound: boolean };
+  tokenMonitor: { available: boolean; stale: boolean; lastUpdatedAt: number };
 }
 
 export const DEFAULT_SOURCE_HEALTH: SourceHealth = {
   hook: { lastEventAt: 0, connected: false },
   jsonl: { lastRecordAt: 0, available: false, fileFound: false },
+  tokenMonitor: { available: false, stale: true, lastUpdatedAt: 0 },
 };
 
 const TOOL_CATEGORIES = new Set(["terminal", "edit", "read", "web", "image", "mcp", "other"]);
@@ -176,6 +180,13 @@ function safeModel(raw: unknown): string | undefined {
   return model || undefined;
 }
 
+function extractTaskTitle(input: Record<string, unknown>): string {
+  return sanitizeTitle(input.title)
+    || sanitizeTitle(input.prompt)
+    || sanitizeTitle(input.text)
+    || sanitizeTitle(input.message);
+}
+
 /** Normalize a Codex hook payload or an already-shaped event. Never copies raw ids, cwd, or tool names. */
 export function normalizeBridgeEvent(
   raw: unknown,
@@ -212,6 +223,8 @@ export function normalizeBridgeEvent(
     sessionKey,
     project,
   };
+  const title = extractTaskTitle(input);
+  if (title) event.title = title;
   if (subagentKey) event.subagentKey = subagentKey;
   if (model) event.model = model;
   if (toolCategory) event.toolCategory = toolCategory;

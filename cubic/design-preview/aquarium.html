@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Agent Tank · 320×240 假图</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0B0D12;color:#C9D1E0;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;padding:48px 56px 72px}
+.page-title{font-size:30px;font-weight:700;color:#E8ECF5;letter-spacing:1px}
+.page-sub{color:#8A93A6;margin-top:10px;font-size:14px;line-height:1.7;max-width:920px}
+.row{display:flex;flex-wrap:wrap;gap:40px 48px;margin-top:36px}
+.slot{width:640px;flex:none}
+.bezel{width:640px;height:480px;border-radius:12px;overflow:hidden;outline:1px solid #2A3342;outline-offset:5px;background:#000}
+iframe{width:320px;height:240px;border:0;transform:scale(2);transform-origin:top left}
+.meta{margin-top:16px;font-size:12px;color:#7B8498;line-height:1.6}
+.meta b{color:#D5DBE5;font-size:13px}
+.notes{margin-top:40px;background:#10141D;border:1px solid #1E2533;border-radius:10px;padding:16px 20px;font-size:13px;color:#98A2B8;line-height:1.8;max-width:1328px}
+.notes b{color:#D5DBE5}
+.tag{display:inline-block;background:#1A2130;border-radius:4px;padding:1px 8px;margin-right:6px;font-size:12px;color:#9FB0CC}
+table{border-collapse:collapse;margin-top:10px;font-size:13px}
+td,th{padding:4px 14px 4px 0;text-align:left;color:#98A2B8}
+th{color:#D5DBE5;font-weight:600}
+.sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="page-title">Agent Tank · 副屏假图</div>
+<div class="page-sub">
+  v7：每条鱼头顶同时标两档余额，格式为「短名 5小时/7天」。前面是 5 小时剩余，后面是 7 天剩余；缺数据写 --。
+  两个数字各自按余额档上色（≥80 绿 / ≥50 蓝 / ≥20 黄 / &lt;20 红）。鱼身颜色仍跟 5 小时走。顶栏右侧 5H/7D 标明斜杠顺序。
+</div>
+
+<div class="row">
+  <div class="slot">
+    <div class="bezel"><iframe src="shots/aquarium.html?state=working&v=7"></iframe></div>
+    <div class="meta"><b>工作中 · WORKING</b><br>CL 82/61（5 小时绿、7 天蓝）、CX 64/22（蓝/黄）、CR 50/88（蓝/绿）、GK 100/--（绿，7 天无数据）。</div>
+  </div>
+  <div class="slot">
+    <div class="bezel"><iframe src="shots/aquarium.html?state=wait&v=7"></iframe></div>
+    <div class="meta"><b>等你确认 · NEEDS USER</b><br>Codex 去撞玻璃。Claude 仍然最大，因为排名跟会话状态分开。</div>
+  </div>
+  <div class="slot">
+    <div class="bezel"><iframe src="shots/aquarium.html?state=error&v=7"></iframe></div>
+    <div class="meta"><b>翻白肚 · ERROR</b><br>出错用姿势表示：Codex 翻白肚，鱼身仍是 5 小时 64% 的蓝。7 天 22% 只体现在后面那个黄字上。</div>
+  </div>
+  <div class="slot">
+    <div class="bezel"><iframe src="shots/aquarium.html?state=idle&v=7"></iframe></div>
+    <div class="meta"><b>夜里 · IDLE</b><br>四条按体型躺在沙上。RATE 变成 --，和现有 rate_idle 逻辑一致。</div>
+  </div>
+</div>
+
+<div class="notes">
+  <b>和现有页的对应</b>
+  <table>
+    <tr><th>位置</th><th>现有逻辑</th><th>这张假图</th></tr>
+    <tr><td>顶栏</td><td>本日用量最高工具名</td><td>CLAUDE</td></tr>
+    <tr><td>缸里 4 条鱼</td><td>tools[] 总用量前四</td><td>体型跟排名走；鱼身颜色跟 5 小时余额走</td></tr>
+    <tr><td>鱼头顶</td><td>短名 + 单一 remainingPercent</td><td>短名 5小时/7天，例如 82/61；两数各自上色</td></tr>
+    <tr><td>鱼的颜色</td><td>&gt;=80 绿 / &gt;=50 蓝 / &gt;=20 黄 / &lt;20 红</td><td>和圆环同一套；套在鱼身和两个数字上</td></tr>
+    <tr><td>底栏四列</td><td>RATE / TODAY / 7D / ALL</td><td>2.4K/m · 12.9M · 166M · 2.2B</td></tr>
+    <tr><td>游法</td><td>Codex 会话六态</td><td>working 游、needs_user 撞玻璃+嘴边吐泡、error 翻白肚、idle 沉底</td></tr>
+    <tr><td>游速</td><td>rate.tokensPerMin</td><td>0→8s 往返，6000+→2.5s；idle 时 RATE 显示 --</td></tr>
+    <tr><td>鱼尾 logo</td><td>design-preview/icons/*.svg</td><td>挂在尾巴后方，尺寸 = 鱼高 × 62%</td></tr>
+    <tr><td>装饰</td><td>无数据含义</td><td>水草 ×5（摇摆）、小虾米 ×1-3（慢漂）</td></tr>
+  </table>
+  <div style="margin-top:12px">
+    <span class="tag">canvas 小鱼</span>
+    <span class="tag">底栏复用现有 stats</span>
+    <span class="tag">tools[1..4]</span>
+    数据仍走现在的 status JSON，不新增字段。
+  </div>
+</div>
+</body>
+</html>

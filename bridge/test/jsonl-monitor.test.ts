@@ -34,7 +34,7 @@ test("tolerates partial final lines and later appended records", async () => {
   const file = path.join(dir, "session.jsonl");
   await writeFile(file, [
     `{"timestamp":"2026-09-18T00:00:00Z","type":"session_meta","payload":{"id":"raw-session","cwd":"C:\\\\Users\\\\me\\\\project"}}`,
-    `{"timestamp":"2026-09-18T00:00:01Z","type":"event_msg","payload":{"type":"user_message","message":"DO_NOT_LEAK_PROMPT"}}`,
+    `{"timestamp":"2026-09-18T00:00:01Z","type":"event_msg","payload":{"type":"user_message","message":"Add the clock\\nDO_NOT_LEAK_PROMPT"}}`,
     `{"timestamp":"2026-09-18T00:00:02Z","type":"event_msg","payload":{"type":"task_started"}`,
   ].join("\n"));
   const monitor = createJsonlMonitor({ sessionsRoot: dir, salt: "test-salt" });
@@ -44,6 +44,23 @@ test("tolerates partial final lines and later appended records", async () => {
   await appendFile(file, "}\n");
   const second = await monitor.poll();
   assert.ok(second.some((event) => event.event === "event_msg:task_started"));
+  monitor.close();
+});
+
+test("reads official primary/secondary rate_limits objects", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "codex-jsonl-official-"));
+  const file = path.join(dir, "session.jsonl");
+  await writeFile(file, [
+    `{"timestamp":"2026-09-20T00:00:00Z","type":"session_meta","payload":{"id":"raw-session","cwd":"C:\\\\Users\\\\me\\\\project"}}`,
+    `{"timestamp":"2026-09-20T00:00:01Z","type":"event_msg","payload":{"type":"token_count","info":{"model_context_window":258400,"last_token_usage":{"total_tokens":38927}},"rate_limits":{"limit_id":"codex","primary":{"used_percent":31,"window_minutes":300,"resets_at":1789885315},"secondary":{"used_percent":84,"window_minutes":10080,"resets_at":1790226883}}}}`,
+    `{"timestamp":"2026-09-20T00:00:02Z","type":"event_msg","payload":{"type":"task_complete"}}`,
+  ].join("\n"), "utf8");
+  const monitor = createJsonlMonitor({ sessionsRoot: dir, salt: "test-salt" });
+  const events = await monitor.poll();
+  const withUsage = events.find((event) => event.usage && event.usage.length >= 2);
+  assert.ok(withUsage);
+  assert.ok(withUsage.usage?.some((w) => w.windowDurationMins === 300 && w.remainingPercent === 69));
+  assert.ok(withUsage.usage?.some((w) => w.windowDurationMins === 10080 && w.remainingPercent === 16));
   monitor.close();
 });
 

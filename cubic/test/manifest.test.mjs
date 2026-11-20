@@ -15,7 +15,7 @@ test("manifest declares a community regular app", async () => {
   assert.match(raw, /icon\s*=\s*main\.png/);
   assert.match(raw, /description\s*=\s*Privacy-safe Codex status and usage monitor/);
   assert.match(raw, /description_zh\s*=\s*在 Cubic 上显示经过隐私过滤的 Codex 状态、活动与用量/);
-  assert.match(raw, /version\s*=\s*0\.5\.0/);
+  assert.match(raw, /version\s*=\s*0\.6\.0/);
 });
 
 test("package contains the required files", async () => {

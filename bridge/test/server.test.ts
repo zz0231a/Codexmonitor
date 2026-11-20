@@ -42,6 +42,11 @@ test("status token_monitor projection omits account identity", async () => {
   assert.equal(body.token_monitor.available, true);
   assert.equal(body.token_monitor.tools[0].id, "codex");
   assert.equal(body.token_monitor.tools[0].todayTokens, 598305);
+  assert.equal(body.token_monitor.tools[0].fiveHourPercent, 82);
+  assert.equal(body.token_monitor.tools[0].sevenDayPercent, 78);
+  assert.equal(body.token_monitor.activeToolId, null);
+  assert.equal(body.token_monitor.allTime.tokens, "2235547008");
+  assert.equal(body.token_monitor.today.tokens, 12889261);
   assert.equal(serialized.includes("hidden@example.com"), false);
   assert.equal(serialized.includes("secret-account-key"), false);
   await server.close();

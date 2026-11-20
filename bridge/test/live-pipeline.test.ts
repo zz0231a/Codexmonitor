@@ -37,6 +37,7 @@ test("hook events then jsonl fallback drive the public snapshot", async () => {
       hook_event_name: "UserPromptSubmit",
       cwd: "C:\\Users\\me\\secret-project",
       session_id: "raw-session-id",
+      prompt: "Add the clock",
     });
     let status = await (await fetch(`${bridge.url}/api/v1/status`)).json();
     assert.equal(status.schemaVersion, 1);
@@ -56,7 +57,7 @@ test("hook events then jsonl fallback drive the public snapshot", async () => {
     });
     status = await (await fetch(`${bridge.url}/api/v1/status`)).json();
     assert.equal(status.status, "needs_user");
-    assert.equal(status.primary_task.title, "secret-project");
+    assert.equal(status.primary_task.title, "Add the clock");
     const serialized = JSON.stringify(status);
     assert.equal(serialized.includes("raw-session-id"), false);
     assert.equal(serialized.includes("C:\\Users"), false);

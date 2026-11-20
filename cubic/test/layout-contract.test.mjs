@@ -2,9 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-test("layout contract defines a single page without rotation", async () => {
+test("layout contract defines two pages with rotation", async () => {
   const lua = await readFile("package/main.lua", "utf8");
-  assert.match(lua, /PAGE_COUNT\s*=\s*1/);
+  assert.match(lua, /PAGE_COUNT\s*=\s*2/);
   assert.match(lua, /TOOL_SLOTS\s*=\s*8/);
   assert.match(lua, /key\.HOME/);
 });
@@ -42,12 +42,15 @@ test("tool icons shrink to 17px with circular corner clipping to avoid covering 
   assert.match(lua, /LV_RADIUS_CIRCLE/);
 });
 
-test("manual switch restarts the rotation timer and HOME exits the app", async () => {
+test("pages switch manually via keys only, no auto rotation; HOME exits", async () => {
   const lua = await readFile("package/main.lua", "utf8");
-  assert.match(lua, /restart_rotation/);
+  assert.match(lua, /不自动轮播/);
+  assert.equal((lua.match(/restart_rotation/g) || []).length, 0);
+  assert.equal((lua.match(/ROTATE_MS/g) || []).length, 0);
   const switchBody = (lua.split(/function\s+CODEX_MONITOR_APP\.switch_page\b/)[1] ?? "").split(/function\s+CODEX_MONITOR_APP\.\w+/)[0];
-  assert.match(switchBody, /manual/);
-  assert.match(switchBody, /restart_rotation/);
+  assert.match(switchBody, /render_page\(index\)/);
+  assert.match(lua, /key\.LEFT/);
+  assert.match(lua, /key\.RIGHT/);
   assert.match(lua, /app\.exit/);
 });
 
@@ -56,12 +59,30 @@ test("weather panel follows the system settings placeholder", async () => {
   assert.match(lua, /weather/);
 });
 
+test("overview clock shows ASCII weekday date and local time in the header gap", async () => {
+  const lua = await readFile("package/main.lua", "utf8");
+  assert.match(lua, /function\s+CODEX_MONITOR_APP\.render_clock\b/);
+  assert.match(lua, /card_clock/);
+  assert.match(lua, /WEEKDAY_ASCII/);
+  assert.match(lua, /"SUN"/);
+  assert.match(lua, /clock_time/);
+  assert.match(lua, /render_clock\(\)/);
+  assert.equal(/[\u4e00-\u9fff]/.test(lua.match(/WEEKDAY_ASCII\s*=\s*\{[\s\S]*?\}/)?.[0] ?? "汉"), false);
+});
+
 test("weather uses firmware cubicserver now API and settings location id", async () => {
   const lua = await readFile("package/main.lua", "utf8");
   assert.match(lua, /http\.cubicserver/);
   assert.match(lua, /\/v1\/weather\/now/);
   assert.match(lua, /weather_location_id/);
   assert.match(lua, /lang=en/);
+});
+
+test("task bar shows English status and latest activity instead of CJK titles", async () => {
+  const lua = await readFile("package/main.lua", "utf8");
+  assert.match(lua, /STATUS_LABEL\[status\].*detail/);
+  assert.match(lua, /st\.activities/);
+  assert.equal(lua.includes("utf8_trunc((pt ~= nil and pt.title)"), false);
 });
 
 test("device-facing status labels stay ASCII because firmware fonts have no CJK glyphs", async () => {

@@ -2,5 +2,6 @@
 .worktrees/
 node_modules/
 bridge/config.json
+bridge/logs/
 cubic/dist/
 *.codex-monitor.bak

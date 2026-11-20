@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "devices": {
+    "aipc": {
+      "deviceId": "aipc",
+      "updatedAt": "2026-09-21T03:00:00.000Z",
+      "periodWindows": { "today": "2026-09-21", "timeZone": "Asia/Shanghai" },
+      "periods": {
+        "today": {
+          "totalTokens": 12889261,
+          "costUsd": 13.7,
+          "clients": { "codex": 598305, "cursor": 1207535, "grok": 11083421 }
+        },
+        "allTime": {
+          "totalTokens": 2235547008,
+          "costUsd": 1219,
+          "clients": {
+            "codex": 1042048714,
+            "cursor": 550480972,
+            "workbuddy": 437616594,
+            "kimi": 139608751,
+            "claude": 100,
+            "grok": 60859164
+          }
+        }
+      },
+      "history": {
+        "daily": [
+          { "date": "2026-09-15", "tokens": 3761759, "cost": 5.89 },
+          { "date": "2026-09-16", "tokens": 8893042, "cost": 11.47 },
+          { "date": "2026-09-17", "tokens": 2764245, "cost": 4.21 },
+          { "date": "2026-09-18", "tokens": 62220260, "cost": 53.92 },
+          { "date": "2026-09-19", "tokens": 437934, "cost": 0.51 },
+          { "date": "2026-09-20", "tokens": 79908079, "cost": 66.91 },
+          { "date": "2026-09-21", "tokens": 12889261, "cost": 13.7 },
+          { "date": "2026-09-14", "tokens": 999999999, "cost": 999 }
+        ]
+      },
+      "limits": {
+        "providers": [
+          {
+            "provider": "codex",
+            "status": "ok",
+            "updatedAt": "2026-09-21T03:00:00.000Z",
+            "accountEmail": "hidden@example.com",
+            "accountKey": "secret-account-key",
+            "windows": [
+              { "kind": "session", "remainingPercent": 82, "resetsAt": "2026-09-21T06:21:29.000Z", "showMeter": true, "windowMinutes": 300 },
+              { "kind": "weekly", "remainingPercent": 78, "resetsAt": "2026-09-27T07:48:07.000Z", "showMeter": true, "windowMinutes": 10080 }
+            ]
+          },
+          {
+            "provider": "cursor",
+            "status": "ok",
+            "updatedAt": "2026-09-21T03:00:00.000Z",
+            "windows": [
+              { "kind": "billing", "label": "Cursor Models", "remainingPercent": 66, "resetsAt": "2026-10-13T08:07:23.000Z", "showMeter": true },
+              { "kind": "billing", "label": "Other Models", "remainingPercent": 100, "resetsAt": "2026-10-13T08:07:23.000Z", "showMeter": true },
+              { "kind": "weekly", "label": "Grok Bot", "remainingPercent": 85, "resetsAt": "2026-09-23T02:53:09.000Z", "showMeter": true, "windowMinutes": 10080 }
+            ]
+          },
+          {
+            "provider": "kimi",
+            "status": "unauthorized",
+            "updatedAt": "2026-09-21T03:00:00.000Z",
+            "windows": []
+          },
+          {
+            "provider": "claude",
+            "status": "ok",
+            "updatedAt": "2026-09-21T03:00:00.000Z",
+            "windows": []
+          }
+        ]
+      }
+    }
+  }
+}

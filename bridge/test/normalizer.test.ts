@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { normalizeCodexSnapshot, selectPrimaryTask } from "../src/normalizer.js";
+import { normalizeCodexSnapshot, sanitizeLabel, sanitizeTitle, selectPrimaryTask } from "../src/normalizer.js";
 
 test("prioritizes a task needing user action over a running task", () => {
   const selected = selectPrimaryTask([
@@ -69,6 +69,19 @@ test("maps task status and counts other active tasks", () => {
   assert.equal(snapshot.status, "needs_user");
   assert.equal(snapshot.primaryTask?.id, "main");
   assert.equal(snapshot.otherActiveTaskCount, 2);
+});
+
+test("strips paths, secrets, CJK, and non-ASCII from labels", () => {
+  assert.equal(sanitizeLabel("open C:\\Users\\me\\secret\\app.ts"), "open [path]");
+  assert.equal(sanitizeLabel("token=abc123xyz"), "[secret]");
+  assert.equal(sanitizeLabel("重构协议适配器"), "");
+  assert.equal(sanitizeLabel("fix 登录 bug"), "fix bug");
+});
+
+test("task titles keep CJK but still strip paths and later prompt lines", () => {
+  assert.equal(sanitizeTitle("红框处显示任务名称"), "红框处显示任务名称");
+  assert.equal(sanitizeTitle("Add the clock\nsecret body"), "Add the clock");
+  assert.equal(sanitizeTitle("open C:\\Users\\me\\secret\\app.ts"), "open [path]");
 });
 
 test("truncates labels to 80 chars and strips newlines", () => {

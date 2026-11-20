@@ -24,6 +24,16 @@ test("hook wins for ten seconds, then jsonl may advance state", () => {
   assert.equal(store.current()?.status, "done");
 });
 
+test("hook priority is per session and does not block other sessions", () => {
+  let now = 100_000;
+  const store = createStateStore();
+  const arbiter = createSourceArbiter(store, { hookPriorityMs: 10_000, now: () => now });
+  arbiter.accept(hookEvent("working", now, { session_id: "session-a" }));
+  now += 1_000;
+  assert.equal(arbiter.accept(jsonlEvent("done", now, { session_id: "session-b" })), true);
+  assert.equal(store.current()?.status, "working");
+});
+
 test("older working event cannot regress a newer terminal event", () => {
   const store = createStateStore();
   const arbiter = createSourceArbiter(store, { hookPriorityMs: 10_000, now: () => 1_000 });

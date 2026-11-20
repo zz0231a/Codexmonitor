@@ -58,28 +58,43 @@ export function classifyActivityStage(kind: unknown): ActivityStage | null {
 }
 
 const DEFAULT_LABELS: Record<ActivityStage, string> = {
-  analysis: "分析输入",
-  reading: "读取文件",
-  tool: "执行工具",
-  needs_user: "等待用户处理",
-  responding: "生成回复",
-  done: "任务完成",
-  error: "处理失败",
-  processing: "处理中",
+  analysis: "analyze input",
+  reading: "read file",
+  tool: "run tool",
+  needs_user: "wait input",
+  responding: "respond",
+  done: "task done",
+  error: "failed",
+  processing: "working",
 };
 
 const PATH_PATTERN = /[A-Za-z]:[\\/][^"'\s，。；、]+|\/(?:home|Users|tmp|var|etc)\/[^"'\s，。；、]+/g;
 const SECRET_PATTERN = /\b(sk-[A-Za-z0-9_-]{6,}|api[_-]?key\s*[=:]\s*[^\s，。]+|token\s*[=:]\s*[^\s，。]+)/gi;
 
-/** 生成设备端安全的短摘要：去掉路径与密钥形态内容、去除换行、截断到 80 字符。 */
+/** 生成设备端安全的短摘要：去掉路径与密钥形态内容、去掉非 ASCII、去换行、截断到 80 字符。固件字体无 CJK 字形。 */
 export function sanitizeLabel(raw: unknown): string {
   if (typeof raw !== "string") return "";
   return raw
-    .replace(PATH_PATTERN, "[路径]")
-    .replace(SECRET_PATTERN, "[密钥]")
-    .replace(/[\r\n]+/g, " ")
+    .replace(PATH_PATTERN, "[path]")
+    .replace(SECRET_PATTERN, "[secret]")
+    .replace(/[^\x20-\x7E]+/g, " ")
+    .replace(/\s+/g, " ")
     .trim()
     .slice(0, MAX_LABEL_LENGTH);
+}
+
+const TITLE_MAX_CHARS = 22;
+
+/** 任务标题：去掉路径、密钥和换行，保留中文；只取首行并截断。 */
+export function sanitizeTitle(raw: unknown): string {
+  if (typeof raw !== "string") return "";
+  const first = raw.split(/\r?\n/, 1)[0] ?? "";
+  return [...first
+    .replace(PATH_PATTERN, "[path]")
+    .replace(SECRET_PATTERN, "[secret]")
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()].slice(0, TITLE_MAX_CHARS).join("");
 }
 
 function clampPercent(raw: unknown): number | undefined {
@@ -99,7 +114,7 @@ function normalizeTask(raw: unknown): TaskSummary {
   const task = asRecord(raw);
   const summary: TaskSummary = {
     id: typeof task.id === "string" && task.id ? task.id : "",
-    title: sanitizeLabel(task.title),
+    title: sanitizeTitle(task.title),
     status: parseProtocolStatus(task.status),
     lastActiveAt: parseProtocolTimestamp(task.lastActiveAt),
   };
@@ -127,13 +142,14 @@ function normalizeActivities(rawTasks: unknown[]): ActivitySummary[] {
 }
 
 function normalizeUsageWindows(raw: unknown): UsageWindow[] {
-  const windows: UsageWindow[] = [];
+  const byDuration = new Map<number, UsageWindow>();
   for (const rawWindow of asArray(raw)) {
     const window = normalizeUsageWindow(rawWindow);
-    if (window) windows.push(window);
+    // 同一时长的窗口只保留最后出现的一份（通常来自最新会话），
+    // 防止多会话累积导致快照体积无限膨胀、设备端解析超时。
+    if (window) byDuration.set(window.windowDurationMins, window);
   }
-  windows.sort((a, b) => a.windowDurationMins - b.windowDurationMins);
-  return windows;
+  return [...byDuration.values()].sort((a, b) => a.windowDurationMins - b.windowDurationMins);
 }
 
 /** 把 app-server 原始输入归一化为设备端快照；只保留安全字段。 */

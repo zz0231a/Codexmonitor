@@ -5,6 +5,7 @@ import path from "node:path";
 const TOP_N = 8;
 const STALE_AFTER_MS = 12 * 60 * 1000;
 const RATE_IDLE_AFTER_MS = 20_000;
+const ACTIVE_TOOL_IDLE_AFTER_MS = 60_000;
 const CLIENT_TO_LIMIT: Record<string, string> = {
   droid: "factory",
   micode: "mimo",
@@ -20,8 +21,12 @@ export interface TokenMonitorTotals {
 export interface TokenMonitorTool {
   id: string;
   rank: number;
+  /** 圆环用：下一次重置的那一档，可能是月度等非 5H/7D 窗口。 */
   remainingPercent: number | null;
   window: string;
+  /** 鱼标签用：只认 5 小时（300 分钟 / session）和 7 天（10080 分钟 / weekly）。 */
+  fiveHourPercent: number | null;
+  sevenDayPercent: number | null;
   todayTokens: number | null;
 }
 
@@ -29,6 +34,7 @@ export interface TokenMonitorSnapshot {
   available: boolean;
   stale: boolean;
   updatedAt: number;
+  activeToolId: string | null;
   tools: TokenMonitorTool[];
   rate: { tokensPerMin: number | null; idle: boolean };
   today: TokenMonitorTotals | null;
@@ -42,10 +48,17 @@ export interface TokenMonitorRateState {
   tokensPerMin: number | null;
 }
 
+export interface TokenMonitorActivityState {
+  todayByTool: Record<string, number>;
+  activeToolId: string | null;
+  activeAtMs: number | null;
+}
+
 export const EMPTY_TOKEN_MONITOR: TokenMonitorSnapshot = {
   available: false,
   stale: true,
   updatedAt: 0,
+  activeToolId: null,
   tools: [],
   rate: { tokensPerMin: null, idle: true },
   today: null,
@@ -93,8 +106,43 @@ function safeId(value: unknown): string | null {
   return id;
 }
 
+function windowMinutesOf(window: Record<string, unknown>): number | null {
+  return finiteNumber(window.windowMinutes ?? window.window_minutes);
+}
+
+function isFiveHourWindow(window: Record<string, unknown>): boolean {
+  const minutes = windowMinutesOf(window);
+  if (minutes === 300) return true;
+  if (minutes !== null) return false;
+  return String(window.kind || "").trim().toLowerCase() === "session";
+}
+
+function isSevenDayWindow(window: Record<string, unknown>): boolean {
+  const minutes = windowMinutesOf(window);
+  if (minutes === 10080) return true;
+  if (minutes !== null) return false;
+  return String(window.kind || "").trim().toLowerCase() === "weekly";
+}
+
+function quotaPercent(
+  account: Record<string, unknown> | null,
+  match: (window: Record<string, unknown>) => boolean,
+): number | null {
+  if (!account) return null;
+  const windows = Array.isArray(account.windows) ? account.windows : [];
+  for (const raw of windows) {
+    const window = asRecord(raw);
+    if (!window || window.showMeter === false) continue;
+    if (!match(window)) continue;
+    const remaining = finiteNumber(window.remainingPercent);
+    if (remaining === null) continue;
+    return clampPercent(remaining);
+  }
+  return null;
+}
+
 function windowLabel(window: Record<string, unknown>): string {
-  const minutes = finiteNumber(window.windowMinutes ?? window.window_minutes);
+  const minutes = windowMinutesOf(window);
   if (minutes === 300) return "5H";
   if (minutes === 10080) return "7D";
   const kind = String(window.kind || "").trim().toLowerCase();
@@ -112,6 +160,27 @@ function periodTotals(period: unknown): TokenMonitorTotals | null {
   const costUsd = finiteNumber(record.costUsd ?? record.cost);
   if (tokens === null || tokens < 0) return null;
   return { tokens, costUsd: costUsd === null || costUsd < 0 ? 0 : costUsd };
+}
+
+function addTotals(a: TokenMonitorTotals | null, b: TokenMonitorTotals | null): TokenMonitorTotals | null {
+  if (!a) return b;
+  if (!b) return a;
+  return { tokens: a.tokens + b.tokens, costUsd: a.costUsd + b.costUsd };
+}
+
+function mergeClients(into: Map<string, number>, add: Map<string, number>): void {
+  for (const [id, tokens] of add) {
+    into.set(id, (into.get(id) ?? 0) + tokens);
+  }
+}
+
+function deviceTodayKey(device: Record<string, unknown>, nowMs: number): string {
+  const periodWindows = asRecord(device.periodWindows);
+  if (typeof periodWindows?.today === "string" && /^\d{4}-\d{2}-\d{2}$/.test(periodWindows.today)) {
+    return periodWindows.today;
+  }
+  const updatedMs = parseTimeMs(device.updatedAt) ?? parseTimeMs(device.receivedAt) ?? nowMs;
+  return dateKeyUtc(updatedMs);
 }
 
 function clientTotals(period: unknown): Map<string, number> {
@@ -194,10 +263,13 @@ function nextResetWindow(account: Record<string, unknown> | null, nowMs: number)
     });
   }
   if (candidates.length === 0) return null;
-  const future = candidates
+  // 5H/7D 可能是 100% 未用的速率窗口；只要还有未满窗口（如 Kimi 月度），就不要用满额窗口冒充用量。
+  const used = candidates.filter((item) => item.remainingPercent < 100);
+  const pool = used.length > 0 ? used : candidates;
+  const future = pool
     .filter((item) => item.resetAt !== null && item.resetAt >= nowMs - 30_000)
     .sort((a, b) => (a.resetAt ?? 0) - (b.resetAt ?? 0));
-  const chosen = future[0] ?? [...candidates].sort((a, b) => {
+  const chosen = future[0] ?? [...pool].sort((a, b) => {
     if (a.resetAt === null && b.resetAt === null) return 0;
     if (a.resetAt === null) return 1;
     if (b.resetAt === null) return -1;
@@ -249,38 +321,93 @@ function nextRate(
   };
 }
 
+function nextActiveTool(
+  previous: TokenMonitorActivityState | null,
+  todayByTool: Map<string, number>,
+  nowMs: number,
+): { activeToolId: string | null; state: TokenMonitorActivityState } {
+  const current = Object.fromEntries(todayByTool);
+  let activeToolId: string | null = null;
+  let activeAtMs: number | null = null;
+
+  if (previous) {
+    let largestDelta = 0;
+    for (const [id, tokens] of todayByTool) {
+      const before = previous.todayByTool[id];
+      const delta = before === undefined ? 0 : tokens - before;
+      if (delta > largestDelta) {
+        largestDelta = delta;
+        activeToolId = id;
+      }
+    }
+    if (activeToolId !== null) {
+      activeAtMs = nowMs;
+    } else if (
+      previous.activeToolId !== null
+      && previous.activeAtMs !== null
+      && nowMs - previous.activeAtMs < ACTIVE_TOOL_IDLE_AFTER_MS
+    ) {
+      activeToolId = previous.activeToolId;
+      activeAtMs = previous.activeAtMs;
+    }
+  }
+
+  return {
+    activeToolId,
+    state: { todayByTool: current, activeToolId, activeAtMs },
+  };
+}
+
 export function projectTokenMonitor(
   hub: unknown,
   settings: unknown,
   nowMs: number,
   rateState: TokenMonitorRateState | null = null,
-): { snapshot: TokenMonitorSnapshot; rateState: TokenMonitorRateState | null } {
+  activityState: TokenMonitorActivityState | null = null,
+): {
+  snapshot: TokenMonitorSnapshot;
+  rateState: TokenMonitorRateState | null;
+  activityState: TokenMonitorActivityState | null;
+} {
   const root = asRecord(hub);
   const devices = asRecord(root?.devices);
   if (!devices || Object.keys(devices).length === 0) {
-    return { snapshot: EMPTY_TOKEN_MONITOR, rateState };
+    return { snapshot: EMPTY_TOKEN_MONITOR, rateState, activityState };
   }
   const wantedId = safeId(asRecord(settings)?.deviceId ?? asRecord(settings)?.lastPostedDeviceId);
-  const device = asRecord(wantedId ? devices[wantedId] : null)
-    ?? asRecord(Object.values(devices)[0]);
-  if (!device) return { snapshot: EMPTY_TOKEN_MONITOR, rateState };
+  const deviceList = Object.values(devices)
+    .map((item) => asRecord(item))
+    .filter((item): item is Record<string, unknown> => item !== null);
+  const localDevice = asRecord(wantedId ? devices[wantedId] : null) ?? deviceList[0];
+  if (!localDevice || deviceList.length === 0) return { snapshot: EMPTY_TOKEN_MONITOR, rateState, activityState };
 
-  const updatedMs = parseTimeMs(device.updatedAt) ?? parseTimeMs(device.receivedAt) ?? 0;
-  const periods = asRecord(device.periods);
-  const allTime = periodTotals(periods?.allTime);
-  const today = periodTotals(periods?.today);
-  const periodWindows = asRecord(device.periodWindows);
-  const todayKey = typeof periodWindows?.today === "string" && /^\d{4}-\d{2}-\d{2}$/.test(periodWindows.today)
-    ? periodWindows.today
-    : dateKeyUtc(updatedMs || nowMs);
-  const last7 = sumDaily(device.history, todayKey) ?? today;
+  // Token Monitor 首页 TOTAL TOKENS 是全部设备加总；额度环仍用本机账号。
+  let allTime: TokenMonitorTotals | null = null;
+  let today: TokenMonitorTotals | null = null;
+  let last7: TokenMonitorTotals | null = null;
+  const allTimeClients = new Map<string, number>();
+  const todayClients = new Map<string, number>();
+  let updatedMs = 0;
+  for (const item of deviceList) {
+    const periods = asRecord(item.periods);
+    const deviceToday = periodTotals(periods?.today);
+    allTime = addTotals(allTime, periodTotals(periods?.allTime));
+    today = addTotals(today, deviceToday);
+    last7 = addTotals(last7, sumDaily(item.history, deviceTodayKey(item, nowMs)) ?? deviceToday);
+    mergeClients(allTimeClients, clientTotals(periods?.allTime));
+    mergeClients(todayClients, clientTotals(periods?.today));
+    updatedMs = Math.max(
+      updatedMs,
+      parseTimeMs(item.updatedAt) ?? parseTimeMs(item.receivedAt) ?? 0,
+    );
+  }
 
-  const ranked = [...clientTotals(periods?.allTime).entries()]
+  const ranked = [...allTimeClients.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
     .slice(0, TOP_N);
 
   const limitAccounts = new Map<string, Record<string, unknown>[]>();
-  const providers = asRecord(device.limits)?.providers;
+  const providers = asRecord(localDevice.limits)?.providers;
   if (Array.isArray(providers)) {
     for (const raw of providers) {
       const account = asRecord(raw);
@@ -292,16 +419,17 @@ export function projectTokenMonitor(
     }
   }
 
-  const todayClients = clientTotals(periods?.today);
-
   const tools: TokenMonitorTool[] = ranked.map(([id, _tokens], index) => {
     const limitId = CLIENT_TO_LIMIT[id] ?? id;
-    const next = nextResetWindow(pickAccount(limitAccounts.get(limitId) ?? []), nowMs);
+    const account = pickAccount(limitAccounts.get(limitId) ?? []);
+    const next = nextResetWindow(account, nowMs);
     return {
       id,
       rank: index + 1,
       remainingPercent: next?.remainingPercent ?? null,
       window: next?.window ?? "--",
+      fiveHourPercent: quotaPercent(account, isFiveHourWindow),
+      sevenDayPercent: quotaPercent(account, isSevenDayWindow),
       todayTokens: todayClients.get(id) ?? null,
     };
   });
@@ -309,12 +437,14 @@ export function projectTokenMonitor(
   const rate = today
     ? nextRate(rateState, today.tokens, nowMs)
     : { snapshot: { tokensPerMin: null, idle: true }, state: rateState };
+  const activity = nextActiveTool(activityState, todayClients, nowMs);
 
   return {
     snapshot: {
       available: true,
       stale: updatedMs === 0 || nowMs - updatedMs > STALE_AFTER_MS,
       updatedAt: Math.floor((updatedMs || nowMs) / 1000),
+      activeToolId: activity.activeToolId,
       tools,
       rate: rate.snapshot,
       today,
@@ -322,6 +452,7 @@ export function projectTokenMonitor(
       allTime,
     },
     rateState: rate.state,
+    activityState: activity.state,
   };
 }
 
@@ -340,6 +471,7 @@ export function createTokenMonitorReader(options: {
   const dir = options.dir ?? defaultTokenMonitorDir();
   const now = options.now ?? Date.now;
   let rateState: TokenMonitorRateState | null = null;
+  let activityState: TokenMonitorActivityState | null = null;
 
   return {
     dir,
@@ -347,11 +479,13 @@ export function createTokenMonitorReader(options: {
       const hub = readJsonFile(path.join(dir, "hub-devices.json"));
       if (hub === null) {
         rateState = null;
+        activityState = null;
         return EMPTY_TOKEN_MONITOR;
       }
       const settings = readJsonFile(path.join(dir, "settings.json"));
-      const projected = projectTokenMonitor(hub, settings, now(), rateState);
+      const projected = projectTokenMonitor(hub, settings, now(), rateState, activityState);
       rateState = projected.rateState;
+      activityState = projected.activityState;
       return projected.snapshot;
     },
   };

@@ -29,6 +29,7 @@
   "token_monitor": {
     "available": true,
     "stale": false,
+    "activeToolId": "cursor",
     "updatedAt": 1789636000,
     "tools": [
       { "id": "codex", "rank": 1, "remainingPercent": 82, "window": "5H" },

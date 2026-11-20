@@ -21,14 +21,26 @@ export interface BridgeSnapshot {
   otherActiveTaskCount: number;
 }
 
+function finiteNumber(...candidates: unknown[]): number | undefined {
+  for (const raw of candidates) {
+    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+    if (typeof raw === "string" && raw.trim() !== "") {
+      const parsed = Number(raw);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return undefined;
+}
+
+/** 兼容旧数组字段与官方 JSONL 对象：used_percent / window_minutes / resets_at。 */
 export function normalizeUsageWindow(raw: unknown): UsageWindow | null {
   if (raw === null || typeof raw !== "object") return null;
   const value = raw as Record<string, unknown>;
-  const used = value.usedPercent;
-  const duration = value.windowDurationMins;
-  const resets = value.resetsAt;
-  if (typeof used !== "number" || !Number.isFinite(used) || used < 0 || used > 100) return null;
-  if (typeof duration !== "number" || !Number.isFinite(duration) || duration <= 0) return null;
-  if (typeof resets !== "number" || !Number.isFinite(resets) || resets < 0) return null;
+  const used = finiteNumber(value.usedPercent, value.used_percent);
+  const duration = finiteNumber(value.windowDurationMins, value.window_minutes, value.window_duration_mins);
+  const resets = finiteNumber(value.resetsAt, value.resets_at);
+  if (used === undefined || used < 0 || used > 100) return null;
+  if (duration === undefined || duration <= 0) return null;
+  if (resets === undefined || resets < 0) return null;
   return { remainingPercent: Math.max(0, Math.min(100, 100 - used)), windowDurationMins: duration, resetsAt: resets };
 }

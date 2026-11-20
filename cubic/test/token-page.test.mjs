@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 test("token page ranks four dynamic slots and shows remaining reset windows", async () => {
   const lua = await readFile("package/main.lua", "utf8");
-  assert.match(lua, /PAGE_COUNT\s*=\s*1/);
+  assert.match(lua, /PAGE_COUNT\s*=\s*2/);
   assert.match(lua, /TOOL_SLOTS\s*=\s*8/);
   assert.match(lua, /function\s+CODEX_MONITOR_APP\.render_tokens\b/);
   assert.match(lua, /token_monitor/);
@@ -20,6 +20,14 @@ test("poll refresh does not restyle hidden pages or reload unchanged logos", asy
   assert.equal((lua.match(/apply_dim\(false\)/g) || []).length, 0);
 });
 
+test("token totals accept string counts and recover 32-bit overflow", async () => {
+  const lua = await readFile("package/main.lua", "utf8");
+  assert.match(lua, /function\s+coerce_number\b/);
+  assert.match(lua, /function\s+parse_count\b/);
+  assert.match(lua, /4294967296\.0/);
+  assert.match(lua, /tonumber\(value\)/);
+});
+
 test("token page formats compact totals and keeps ASCII tool labels", async () => {
   const lua = await readFile("package/main.lua", "utf8");
   assert.match(lua, /function\s+compact_num\b/);
@@ -29,7 +37,7 @@ test("token page formats compact totals and keeps ASCII tool labels", async () =
   assert.match(lua, /WBUDDY/);
   assert.match(lua, /deepseek\s*=\s*"DSEEK"/);
   assert.match(lua, /dsh\s*=\s*"DSEEK"/);
-  assert.match(lua, /tool\.id\s*==\s*"dsh"/);
+  assert.match(lua, /TM_ICON_IDS\s*=\s*\{[\s\S]*?dsh\s*=\s*true/);
   assert.equal(/[\u4e00-\u9fff]/.test(lua.match(/TOOL_LABEL\s*=\s*\{[\s\S]*?\}/)?.[0] ?? "汉"), false);
 });
 

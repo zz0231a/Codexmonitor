@@ -8,6 +8,7 @@ import { normalizeCodexSnapshot } from "./normalizer.js";
 import { createStatusServer, type RunningServer, type ServerConfig } from "./server.js";
 import { createSourceArbiter } from "./source-arbiter.js";
 import { createStateStore, type StateStore } from "./state-store.js";
+import { createTokenMonitorReader } from "./token-monitor.js";
 
 export interface BridgeConfig extends ServerConfig {
   /** app-server 快照轮询间隔（毫秒），仅 fixture 模式使用。 */
@@ -17,6 +18,8 @@ export interface BridgeConfig extends ServerConfig {
   jsonlPollIntervalMs?: number;
   privacySalt?: string;
   sessionsRoot?: string;
+  tokenMonitorDir?: string;
+  tokenMonitorPollMs?: number;
 }
 
 const DEFAULT_CONFIG: BridgeConfig = {
@@ -28,6 +31,7 @@ const DEFAULT_CONFIG: BridgeConfig = {
   hookPort: 8974,
   jsonlPollIntervalMs: 1200,
   privacySalt: "codex-monitor",
+  tokenMonitorPollMs: 5000,
 };
 
 export interface RunningBridge {
@@ -126,6 +130,24 @@ export async function startBridge(options: {
     timer.unref();
     timers.push(timer);
   }
+
+  const tokenMonitor = createTokenMonitorReader({
+    dir: config.tokenMonitorDir,
+    now,
+  });
+  const pollTokenMonitor = () => {
+    const snapshot = tokenMonitor.poll();
+    store.updateTokenMonitor(snapshot);
+    store.updateSourceHealth("tokenMonitor", {
+      available: snapshot.available,
+      stale: snapshot.stale,
+      lastUpdatedAt: snapshot.updatedAt,
+    });
+  };
+  pollTokenMonitor();
+  const tokenMonitorTimer = setInterval(pollTokenMonitor, config.tokenMonitorPollMs ?? 5000);
+  tokenMonitorTimer.unref();
+  timers.push(tokenMonitorTimer);
 
   return {
     store,

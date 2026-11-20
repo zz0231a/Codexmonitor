@@ -3,6 +3,7 @@ import path from "node:path";
 import type { BridgeEvent, BridgeSource } from "./event-model.js";
 import { normalizeBridgeEvent } from "./event-model.js";
 import { normalizeUsageWindow, type BridgeStatus, type UsageWindow } from "./model.js";
+import { sanitizeTitle } from "./normalizer.js";
 
 const JSONL_STATUS: Record<string, BridgeStatus> = {
   "event_msg:task_started": "working",
@@ -40,6 +41,7 @@ interface Cursor {
 interface SessionMeta {
   sessionId: string;
   cwd: string;
+  title?: string;
   model?: string;
   contextPercent?: number;
   usage?: UsageWindow[];
@@ -96,14 +98,30 @@ function parseTime(raw: unknown, fallback: number): number {
   return fallback;
 }
 
+function looksLikeUsageWindow(item: unknown): boolean {
+  const rec = asRecord(item);
+  return finiteDurationOrUsed(rec);
+}
+
+function finiteDurationOrUsed(rec: Record<string, unknown>): boolean {
+  return typeof rec.windowDurationMins === "number" || typeof rec.usedPercent === "number"
+    || typeof rec.window_minutes === "number" || typeof rec.used_percent === "number";
+}
+
+function officialLimitWindows(rec: Record<string, unknown>): unknown[] {
+  const windows: unknown[] = [];
+  for (const key of ["primary", "secondary"]) {
+    const item = rec[key];
+    if (item && typeof item === "object" && !Array.isArray(item) && looksLikeUsageWindow(item)) {
+      windows.push(item);
+    }
+  }
+  return windows;
+}
+
 function findRateLimits(node: unknown): unknown[] {
   if (Array.isArray(node)) {
-    if (node.some((item) => {
-      const rec = asRecord(item);
-      return typeof rec.windowDurationMins === "number" || typeof rec.usedPercent === "number";
-    })) {
-      return node;
-    }
+    if (node.some(looksLikeUsageWindow)) return node;
     for (const item of node) {
       const found = findRateLimits(item);
       if (found.length) return found;
@@ -113,6 +131,13 @@ function findRateLimits(node: unknown): unknown[] {
   const rec = asRecord(node);
   if (Array.isArray(rec.rate_limits)) return rec.rate_limits;
   if (Array.isArray(rec.rateLimits)) return rec.rateLimits;
+  const nested = rec.rate_limits ?? rec.rateLimits;
+  if (nested && typeof nested === "object" && !Array.isArray(nested)) {
+    const official = officialLimitWindows(asRecord(nested));
+    if (official.length) return official;
+  }
+  const self = officialLimitWindows(rec);
+  if (self.length) return self;
   for (const value of Object.values(rec)) {
     if (value && typeof value === "object") {
       const found = findRateLimits(value);
@@ -162,11 +187,22 @@ function toEvent(
     at,
     session_id: meta.sessionId,
     cwd: meta.cwd,
+    title: extra.title ?? meta.title,
     model: meta.model,
     contextPercent: meta.contextPercent,
     usage: meta.usage,
     ...extra,
   }, source, at, salt);
+}
+
+function firstUserText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  for (const item of content) {
+    const rec = asRecord(item);
+    if (typeof rec.text === "string" && rec.text.trim()) return rec.text;
+  }
+  return "";
 }
 
 function parseRecord(raw: unknown, meta: SessionMeta, salt: string, nowMs: number): BridgeEvent | null {
@@ -193,10 +229,24 @@ function parseRecord(raw: unknown, meta: SessionMeta, salt: string, nowMs: numbe
     return toEvent("jsonl", meta.lastStatus, "event_msg:token_count", at, meta, salt);
   }
 
+  if (type === "response_item" && payloadType === "message" && payload.role === "user") {
+    const title = sanitizeTitle(firstUserText(payload.content));
+    if (title) meta.title = title;
+    meta.lastStatus = "working";
+    return toEvent("jsonl", "working", "event_msg:user_message", at, meta, salt, title ? { title } : {});
+  }
+
   const mapped = JSONL_STATUS[keyFor(type, payloadType)];
   if (!mapped) return null;
   meta.lastStatus = mapped;
   const extra: Record<string, unknown> = {};
+  if (type === "event_msg" && payloadType === "user_message") {
+    const title = sanitizeTitle(payload.message);
+    if (title) {
+      meta.title = title;
+      extra.title = title;
+    }
+  }
   if (type === "response_item" && typeof payload.name === "string") extra.tool_name = payload.name;
   if (payloadType === "web_search_call") extra.tool_name = "web_search";
   return toEvent("jsonl", mapped, keyFor(type, payloadType), at, meta, salt, extra);

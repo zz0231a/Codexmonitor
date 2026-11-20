@@ -1,0 +1,57 @@
+{
+  "rateLimits": [
+    {
+      "resetsAt": 1789908901,
+      "usedPercent": 27,
+      "windowDurationMins": 300
+    },
+    {
+      "resetsAt": 1790160901,
+      "usedPercent": 62,
+      "windowDurationMins": 10080
+    }
+  ],
+  "tasks": [
+    {
+      "title": "refactor protocol adapter",
+      "lastActiveAt": 1789901693,
+      "id": "task-preview",
+      "model": "gpt-5.2-codex",
+      "contextPercent": 42,
+      "activities": [
+        {
+          "text": "analyze input",
+          "kind": "user_message",
+          "at": 1789901661
+        },
+        {
+          "text": "read [path]",
+          "kind": "tool",
+          "at": 1789901669
+        },
+        {
+          "text": "run npm verify",
+          "kind": "tool",
+          "at": 1789901681
+        },
+        {
+          "text": "respond",
+          "kind": "agent_message",
+          "at": 1789901689
+        },
+        {
+          "text": "open main.ts",
+          "kind": "tool",
+          "at": 1789901693
+        }
+      ],
+      "status": "running"
+    },
+    {
+      "id": "task-other",
+      "lastActiveAt": 1789901641,
+      "title": "review login PR",
+      "status": "running"
+    }
+  ]
+}

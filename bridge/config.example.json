@@ -4,5 +4,6 @@
   "allow": ["10.23.2.209"],
   "hookHost": "127.0.0.1",
   "hookPort": 8974,
-  "jsonlPollIntervalMs": 1200
+  "jsonlPollIntervalMs": 1200,
+  "tokenMonitorPollMs": 5000
 }

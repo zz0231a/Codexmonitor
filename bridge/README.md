@@ -48,7 +48,7 @@ npm run uninstall:hooks
 
 ## 接口
 
-- `GET /api/v1/status` — 设备端单一快照（`schemaVersion: 1`），数据过期也保持 200，并带 `codex_connected` 与 `last_updated_at`
+- `GET /api/v1/status` — 设备端单一快照（`schemaVersion: 1`），数据过期也保持 200，并带 `codex_connected`、`last_updated_at` 与 `token_monitor.activeToolId`。后者表示最近一次采样中当日 Token 增长最多的工具，连续 60 秒无增长后为 `null`
 - `GET /api/v1/health` — 安装与故障检查；分别报告 Bridge、Codex、Hook、JSONL。任一数据源可用时返回 200，两个来源都无法提供 Codex 状态时返回 503
 - `POST http://127.0.0.1:8974/internal/event` — 仅本机 Hook 入口，单事件不超过 64 KiB，不在局域网暴露
 

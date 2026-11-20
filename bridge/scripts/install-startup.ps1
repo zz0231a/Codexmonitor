@@ -8,19 +8,21 @@ $NodeExe = (Get-Command node -ErrorAction Stop).Source
 $MainTs = Join-Path $BridgeDir "src\main.ts"
 $ConfigPath = Join-Path $BridgeDir "config.json"
 $TsxPkg = Join-Path $BridgeDir "node_modules\tsx\package.json"
+$HiddenLauncher = Join-Path $PSScriptRoot "start-bridge-hidden.vbs"
 if (-not (Test-Path $MainTs)) { throw "Bridge entry not found: $MainTs" }
 if (-not (Test-Path $TsxPkg)) { throw "tsx is not installed in $BridgeDir" }
+if (-not (Test-Path $HiddenLauncher)) { throw "Hidden launcher not found: $HiddenLauncher" }
 
 $StartupDir = [Environment]::GetFolderPath("Startup")
 $ShortcutPath = Join-Path $StartupDir "$AppName.lnk"
 
 $Wsh = New-Object -ComObject WScript.Shell
 $Shortcut = $Wsh.CreateShortcut($ShortcutPath)
-$Shortcut.TargetPath = $NodeExe
-$Shortcut.Arguments = "--import tsx `"$MainTs`" --config `"$ConfigPath`""
+$Shortcut.TargetPath = Join-Path $env:SystemRoot "System32\wscript.exe"
+$Shortcut.Arguments = "//B //NoLogo `"$HiddenLauncher`""
 $Shortcut.WorkingDirectory = $BridgeDir
-$Shortcut.WindowStyle = 0
-$Shortcut.Description = "Codex Monitor Bridge (current user)"
+$Shortcut.WindowStyle = 1
+$Shortcut.Description = "Codex Monitor Bridge (silent background startup)"
 $Shortcut.Save()
 
 Write-Host "Installed: $ShortcutPath"

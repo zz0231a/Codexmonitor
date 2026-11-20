@@ -1,7 +1,24 @@
 import http from "node:http";
 import type { StateStore } from "./state-store.js";
 import type { BridgeSnapshot } from "./model.js";
-import { EMPTY_TOKEN_MONITOR, type TokenMonitorSnapshot } from "./token-monitor.js";
+import { EMPTY_TOKEN_MONITOR, type TokenMonitorSnapshot, type TokenMonitorTotals } from "./token-monitor.js";
+
+/** Cubic sjson 按 32 位有符号整数解析 JSON 整数；超过后会溢出成负数或丢字段。 */
+const INT32_MAX = 2147483647;
+
+function publicCount(value: number | null | undefined): number | string | null {
+  if (value == null || !Number.isFinite(value) || value < 0) return null;
+  if (value > INT32_MAX) return String(Math.round(value));
+  return value;
+}
+
+function publicTotals(value: TokenMonitorTotals | null) {
+  if (!value) return null;
+  return {
+    tokens: publicCount(value.tokens),
+    costUsd: value.costUsd,
+  };
+}
 
 export interface ServerConfig {
   host?: string;
@@ -26,20 +43,23 @@ function publicTokenMonitor(snapshot: TokenMonitorSnapshot | null) {
     available: value.available,
     stale: value.stale,
     updatedAt: value.updatedAt,
+    activeToolId: value.activeToolId,
     tools: value.tools.map((tool) => ({
       id: tool.id,
       rank: tool.rank,
       remainingPercent: tool.remainingPercent,
       window: tool.window,
-      todayTokens: tool.todayTokens ?? null,
+      fiveHourPercent: tool.fiveHourPercent,
+      sevenDayPercent: tool.sevenDayPercent,
+      todayTokens: publicCount(tool.todayTokens),
     })),
     rate: {
       tokensPerMin: value.rate.tokensPerMin,
       idle: value.rate.idle,
     },
-    today: value.today,
-    last7: value.last7,
-    allTime: value.allTime,
+    today: publicTotals(value.today),
+    last7: publicTotals(value.last7),
+    allTime: publicTotals(value.allTime),
   };
 }
 

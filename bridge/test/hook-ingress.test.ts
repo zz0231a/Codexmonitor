@@ -80,9 +80,10 @@ test("hook CLI posts a normalized event and always prints {}", async () => {
 test("buildHookEvent only keeps whitelist fields", () => {
   const event = buildHookEvent({
     hook_event_name: "PermissionRequest",
-    prompt: "DO_NOT_LEAK",
+    prompt: "Add the clock\nDO_NOT_LEAK",
     cwd: "C:\\Users\\me\\work",
   }, 5, "s");
   assert.equal(event.status, "needs_user");
+  assert.equal(event.title, "Add the clock");
   assert.equal(JSON.stringify(event).includes("DO_NOT_LEAK"), false);
 });
